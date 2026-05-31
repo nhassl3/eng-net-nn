@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS admins (
+    user_id    UUID        PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

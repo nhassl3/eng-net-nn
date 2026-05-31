@@ -1,0 +1,22 @@
+env: "local"
+http_server:
+  address: "localhost:8080"
+  timeout: 4s
+  idle_timeout: 60s
+db:
+  host: "localhost"
+  port: 5432
+  username: "ipbuild"
+  dbname: "unet"
+  sslmode: "disable"
+redis:
+  username: "ipbuild-unet"
+  address: "localhost:6380"
+  db: 0
+  ttl:
+    user_profile: 15m
+    blacklist: 5m
+    auth_timeout: 5m
+token:
+  access_ttl: 15m
+  refresh_ttl: 168h

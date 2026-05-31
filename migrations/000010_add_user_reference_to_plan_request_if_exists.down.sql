@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS "link_user_with_plan";

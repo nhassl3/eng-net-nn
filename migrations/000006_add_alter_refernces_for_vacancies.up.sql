@@ -1,0 +1,1 @@
+ALTER TABLE "vacancies" ADD FOREIGN KEY ("jd") REFERENCES "job_directions" ("id") DEFERRABLE INITIALLY IMMEDIATE;
