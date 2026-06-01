@@ -25,8 +25,7 @@ type Vacancies interface {
 	CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error)
 	UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error
 	DeleteVacancy(ctx context.Context, vacancyId string) error
-
-	ExistsVacancy(ctx context.Context, vacancyId string) (bool, error)
+	
 	RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 }
 

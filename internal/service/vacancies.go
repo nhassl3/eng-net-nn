@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
@@ -63,23 +65,18 @@ func (s *VacanciesService) Delete(ctx context.Context, vacancyId string) error {
 // Respond saves the applicant's form to the DB and asynchronously notifies the
 // owner by email. SMTP errors are logged but do not fail the request.
 func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error {
-	if exists, err := s.repo.ExistsVacancy(ctx, vacancyId); !exists {
-		if err != nil {
-			return fmt.Errorf("vacancies_service.Respond: %w", err)
+	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrVacancyNotExists
 		}
-		return domain.ErrVacancyNotExists
+		return fmt.Errorf("vacancies_service.Respond: failed to get vacancy %w", err)
 	}
 
-	_, err := s.repo.RespondToVacancy(ctx, vacancyId, applicantsForm)
-	if err != nil {
+	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, applicantsForm); err != nil {
 		return fmt.Errorf("vacancies_service.Respond: %w", err)
 	}
 
-	vacancyName := vacancyId
-	if vacancy, err := s.repo.GetVacancy(ctx, vacancyId); err == nil {
-		vacancyName = vacancy.Name
-	}
-
-	_ = s.mailer.NotifyNewApplicant(ctx, vacancyName, applicantsForm)
+	_ = s.mailer.NotifyNewApplicant(ctx, vacancy.Name, applicantsForm)
 	return nil
 }
