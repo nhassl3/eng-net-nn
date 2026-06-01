@@ -25,5 +25,4 @@ token:
   refresh_ttl: 168h
 smtp:
   host: "smtp.yandex.ru"
-  enable_ssl: "SSL"
   port: 587

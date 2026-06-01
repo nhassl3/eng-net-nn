@@ -4,17 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
 	"github.com/wneessen/go-mail"
 )
 
 type Notifier interface {
 	NotifyNewApplicant(ctx context.Context, vacancyName string, form *domain.ApplicantsFormInput) error
 	NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInput) error
+	Close(ctx context.Context) error
 }
 
-// NoopNotifier logs incoming notifications without sending emails.
+// NoopNotifier logs notifications without sending emails.
 // Used when SMTP host is not configured (e.g. local dev).
 type NoopNotifier struct{}
 
@@ -28,31 +32,102 @@ func (n *NoopNotifier) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanI
 	return nil
 }
 
+func (n *NoopNotifier) Close(_ context.Context) error { return nil }
+
+type job struct {
+	subject string
+	body    string
+	replyTo string
+}
+
+const (
+	queueSize   = 100
+	numWorkers  = 2
+	sendTimeout = 15 * time.Second
+)
+
 type SMTPMailer struct {
 	smtpClient *mail.Client
 	from       string
 	ownerEmail string
+	queue      chan job
+	wg         sync.WaitGroup
+	logger     *slog.Logger
 }
 
-func NewSMTPMailer(host, username, password, from, ownerEmail string, port int) (*SMTPMailer, error) {
+func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, logger *slog.Logger) (*SMTPMailer, error) {
 	if from == "" {
 		from = username
 	}
-	client, err := mail.NewClient(host,
+
+	opts := []mail.Option{
 		mail.WithPort(port),
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 		mail.WithUsername(username),
 		mail.WithPassword(password),
-		mail.WithTLSPolicy(mail.DefaultPortTLS),
-	)
+		mail.WithTimeout(10 * time.Second),
+	}
+	if port == 465 {
+		opts = append(opts, mail.WithSSL())
+	} else {
+		opts = append(opts, mail.WithTLSPolicy(mail.TLSMandatory))
+	}
+
+	client, err := mail.NewClient(host, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("mailer.NewSMTPMailer: %w", err)
 	}
-	return &SMTPMailer{
+
+	m := &SMTPMailer{
 		smtpClient: client,
 		from:       from,
 		ownerEmail: ownerEmail,
-	}, nil
+		queue:      make(chan job, queueSize),
+		logger:     logger,
+	}
+
+	for range numWorkers {
+		m.wg.Add(1)
+		go m.worker()
+	}
+
+	return m, nil
+}
+
+func (m *SMTPMailer) worker() {
+	defer m.wg.Done()
+	for j := range m.queue {
+		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
+		if err := m.send(ctx, j.subject, j.body, j.replyTo); err != nil {
+			m.logger.Error("mailer: send failed", sl.ErrLog(err))
+		}
+		cancel()
+	}
+}
+
+func (m *SMTPMailer) enqueue(j job) {
+	select {
+	case m.queue <- j:
+	default:
+		m.logger.Error("mailer: queue full, notification dropped",
+			slog.String("subject", j.subject))
+	}
+}
+
+// Close drains the worker queue within the given context deadline.
+func (m *SMTPMailer) Close(ctx context.Context) error {
+	close(m.queue)
+	done := make(chan struct{})
+	go func() {
+		m.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("mailer.Close: drain timed out: %w", ctx.Err())
+	}
 }
 
 func (m *SMTPMailer) send(ctx context.Context, subject, htmlBody, replyTo string) error {
@@ -76,7 +151,7 @@ func (m *SMTPMailer) send(ctx context.Context, subject, htmlBody, replyTo string
 	return nil
 }
 
-func (m *SMTPMailer) NotifyNewApplicant(ctx context.Context, vacancyName string, form *domain.ApplicantsFormInput) error {
+func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, form *domain.ApplicantsFormInput) error {
 	subject := fmt.Sprintf("Новый отклик на вакансию: %s", vacancyName)
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -106,10 +181,11 @@ func (m *SMTPMailer) NotifyNewApplicant(ctx context.Context, vacancyName string,
 		form.FullName, form.Email, form.PhoneNumber,
 		form.City, form.Exp, form.Description, form.Resume,
 	)
-	return m.send(ctx, subject, body, form.Email)
+	m.enqueue(job{subject: subject, body: body, replyTo: form.Email})
+	return nil
 }
 
-func (m *SMTPMailer) NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInput) error {
+func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInput) error {
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
@@ -129,5 +205,6 @@ func (m *SMTPMailer) NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanI
 </html>`,
 		plan.FullName, plan.EmailToFeedback, plan.Direction, plan.TaskDescription,
 	)
-	return m.send(ctx, "Новая заявка на разработку плана", body, plan.EmailToFeedback)
+	m.enqueue(job{subject: "Новая заявка на разработку плана", body: body, replyTo: plan.EmailToFeedback})
+	return nil
 }

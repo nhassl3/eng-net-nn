@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/app"
 	"github.com/nhassl3/IpBuild-backend/internal/config"
@@ -60,7 +61,9 @@ func main() {
 	<-quit
 
 	log.Info("Server is down")
-	if err := server.Shutdown(context.Background()); err != nil {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Error("error shutting down the server", sl.ErrLog(err))
 	}
 }

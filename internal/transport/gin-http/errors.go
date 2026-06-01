@@ -23,7 +23,8 @@ func handleError(c *gin.Context, err error) {
 
 	case errors.Is(err, domain.ErrUserNotExists),
 		errors.Is(err, domain.ErrVacanciesNotExists),
-		errors.Is(err, domain.ErrPlanRequestNotExists):
+		errors.Is(err, domain.ErrPlanRequestNotExists),
+		errors.Is(err, domain.ErrVacancyNotExists):
 		NewErrorResponse(c, http.StatusNotFound, err.Error())
 
 	default:

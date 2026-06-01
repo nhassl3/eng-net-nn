@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 
 type Server struct {
 	httpServer *http.Server
+	notifier   mailer.Notifier
 }
 
 func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
@@ -73,7 +75,7 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	if cfg.SMTP.Host != "" {
 		notifier, err = mailer.NewSMTPMailer(
 			cfg.SMTP.Host, cfg.SMTP.Username, cfg.SMTP.Password,
-			cfg.SMTP.From, cfg.SMTP.WorkEmail, cfg.SMTP.Port,
+			cfg.SMTP.From, cfg.SMTP.WorkEmail, cfg.SMTP.Port, logger,
 		)
 		if err != nil {
 			return fmt.Errorf("app: create SMTP mailer: %w", err)
@@ -81,6 +83,7 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	} else {
 		notifier = &mailer.NoopNotifier{}
 	}
+	s.notifier = notifier
 
 	services := service.NewService(repo, authRedis, accessManagerWithBL, refreshManagerWithBL, blacklistRepo, notifier)
 
@@ -99,5 +102,7 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	return s.httpServer.Shutdown(ctx)
+	httpErr := s.httpServer.Shutdown(ctx)
+	mailerErr := s.notifier.Close(ctx)
+	return errors.Join(httpErr, mailerErr)
 }

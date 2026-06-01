@@ -3,11 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
-	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 )
 
@@ -28,12 +26,7 @@ func (s *PlanService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInp
 		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
 	}
 
-	go func(p *domain.CreatePlanInput) {
-		if err := s.mailer.NotifyNewPlan(context.Background(), p); err != nil {
-			slog.Error("createPlan: notify owner failed", sl.ErrLog(err))
-		}
-	}(plan)
-
+	_ = s.mailer.NotifyNewPlan(ctx, plan)
 	return result, nil
 }
 

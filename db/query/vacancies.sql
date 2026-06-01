@@ -28,3 +28,6 @@ VALUES (
         sqlc.narg('description'),
         sqlc.narg('resume'),
         sqlc.arg('vacancy_id')) RETURNING id;
+
+-- name: ExistsVacancy :one
+SELECT EXISTS(SELECT 1 FROM vacancies WHERE id=$1);

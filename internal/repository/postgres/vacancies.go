@@ -137,6 +137,10 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId string, 
 	return uuid2String(userRespondId), nil
 }
 
+func (r *VacanciesRepo) ExistsVacancy(ctx context.Context, vacancyId string) (bool, error) {
+	return r.db.ExistsVacancy(ctx, string2UUID(vacancyId))
+}
+
 func mapVacancies(vacancies []db.Vacancy) *domain.Vacancies {
 	domainVacancies := make([]domain.Vacancy, len(vacancies))
 	for i := range vacancies {

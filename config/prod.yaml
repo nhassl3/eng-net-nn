@@ -24,5 +24,4 @@ token:
   refresh_ttl: 168h
 smtp:
   host: "smtp.ya.ru"
-  ssl_enable: "SSL"
   port: 465

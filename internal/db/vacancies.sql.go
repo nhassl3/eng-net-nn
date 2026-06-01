@@ -49,6 +49,17 @@ func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (V
 	return i, err
 }
 
+const existsVacancy = `-- name: ExistsVacancy :one
+SELECT EXISTS(SELECT 1 FROM vacancies WHERE id=$1)
+`
+
+func (q *Queries) ExistsVacancy(ctx context.Context, id uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, existsVacancy, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getVacancies = `-- name: GetVacancies :many
 SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at FROM vacancies LIMIT $1 OFFSET $2
 `
