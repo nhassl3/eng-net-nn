@@ -21,8 +21,8 @@ type Vacancies struct {
 type ApplicantsFormInput struct {
 	FullName    string `json:"fullName,omitempty"`
 	PhoneNumber string `json:"phoneNumber,omitempty"`
-	Email       string `json:"email,omitempty"`
-	City        string `json:"city,omitempty"`
+	Email       string `json:"email,omitempty" validator:"required,email"`
+	City        string `json:"city,omitempty" validator:"required,city"`
 	Exp         string `json:"exp,omitempty"`
 	Description string `json:"description,omitempty"`
 	Resume      string `json:"resume,omitempty"` // like a link to s3 storage (minio)

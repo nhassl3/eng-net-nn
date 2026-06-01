@@ -2,35 +2,59 @@ package gin_http
 
 import (
 	"log/slog"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 	"github.com/nhassl3/IpBuild-backend/internal/service"
-	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/interceptors"
+	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
+	valid "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/validator"
 	sloggin "github.com/samber/slog-gin"
 )
 
 type Handler struct {
 	services   *service.Service
 	logger     *slog.Logger
-	middleware *interceptors.AuthInterceptor
+	middleware *middleware.AuthInterceptor
 }
 
 func NewHandler(services *service.Service, logger *slog.Logger) *Handler {
 	return &Handler{
 		services:   services,
 		logger:     logger,
-		middleware: interceptors.NewAuthInterceptor(services.Authorization),
+		middleware: middleware.NewAuthInterceptor(services.Authorization),
 	}
 }
 
-func (h *Handler) InitRoutes(env string) *gin.Engine {
+func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
+	// Set output mode
 	if env != "local" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.New()
-	router.Use(gin.Recovery())
-	router.Use(sloggin.New(h.logger))
+	// Initialize default router
+	router := gin.Default()
+
+	// Router settings
+	router.Use(gin.Recovery())        // recovery middleware for panics
+	router.Use(sloggin.New(h.logger)) // use custom logger for output messages
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     append(allowOrigins, "http://localhost:3000"),
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	})) // CORS Policy
+
+	// Registry new validation rules for struct tags in domain models or sessions
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		if err := v.RegisterValidation("city", valid.ValidCity); err != nil {
+			panic("failed to registry new validation rule for city: " + err.Error())
+		}
+	}
 
 	auth := router.Group("/auth")
 	{

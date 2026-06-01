@@ -7,6 +7,7 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/redis"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
+	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 )
 
 // Authorization service (create/login user, token lifecycle)
@@ -49,10 +50,11 @@ func NewService(
 	accessMaker auth.TokenManager,
 	refreshMaker auth.TokenManager,
 	blacklist auth.TokenBlacklist,
+	mailer mailer.Notifier,
 ) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
-		Vacancies:     NewVacanciesService(repos.Vacancies),
-		Plan:          NewPlanService(repos.Plan),
+		Vacancies:     NewVacanciesService(repos.Vacancies, mailer),
+		Plan:          NewPlanService(repos.Plan, mailer),
 	}
 }

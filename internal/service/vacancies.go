@@ -3,17 +3,21 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 )
 
 type VacanciesService struct {
-	repo postgres.Vacancies
+	repo   postgres.Vacancies
+	mailer mailer.Notifier
 }
 
-func NewVacanciesService(repo postgres.Vacancies) *VacanciesService {
-	return &VacanciesService{repo: repo}
+func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier) *VacanciesService {
+	return &VacanciesService{repo: repo, mailer: mailer}
 }
 
 func (s *VacanciesService) List(ctx context.Context) (*domain.Vacancies, error) {
@@ -58,10 +62,24 @@ func (s *VacanciesService) Delete(ctx context.Context, vacancyId string) error {
 	return nil
 }
 
+// Respond saves the applicant's form to the DB and asynchronously notifies the
+// owner by email. SMTP errors are logged but do not fail the request.
 func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error {
 	_, err := s.repo.RespondToVacancy(ctx, vacancyId, applicantsForm)
 	if err != nil {
 		return fmt.Errorf("vacancies_service.Respond: %w", err)
 	}
+
+	vacancyName := vacancyId
+	if vacancy, err := s.repo.GetVacancy(ctx, vacancyId); err == nil {
+		vacancyName = vacancy.Name
+	}
+
+	go func(form *domain.ApplicantsFormInput, name string) {
+		if err := s.mailer.NotifyNewApplicant(context.Background(), name, form); err != nil {
+			slog.Error("respond: notify owner failed", sl.ErrLog(err))
+		}
+	}(applicantsForm, vacancyName)
+
 	return nil
 }

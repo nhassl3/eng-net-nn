@@ -3,24 +3,37 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 )
 
 type PlanService struct {
-	repo postgres.Plan
+	repo   postgres.Plan
+	mailer mailer.Notifier
 }
 
-func NewPlanService(repo postgres.Plan) *PlanService {
-	return &PlanService{repo: repo}
+func NewPlanService(repo postgres.Plan, mailer mailer.Notifier) *PlanService {
+	return &PlanService{repo: repo, mailer: mailer}
 }
 
+// CreatePlan saves the plan request to the DB and asynchronously notifies the
+// owner by email. SMTP errors are logged but do not fail the request.
 func (s *PlanService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error) {
 	result, err := s.repo.CreatePlan(ctx, plan)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
 	}
+
+	go func(p *domain.CreatePlanInput) {
+		if err := s.mailer.NotifyNewPlan(context.Background(), p); err != nil {
+			slog.Error("createPlan: notify owner failed", sl.ErrLog(err))
+		}
+	}(plan)
+
 	return result, nil
 }
 

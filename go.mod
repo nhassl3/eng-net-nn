@@ -5,12 +5,15 @@ go 1.26.2
 require (
 	aidanwoods.dev/go-paseto v1.6.0
 	github.com/fatih/color v1.19.0
+	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
+	github.com/go-playground/validator/v10 v10.30.2
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/redis/go-redis/v9 v9.20.0
 	github.com/samber/slog-gin v1.21.1
 	github.com/spf13/viper v1.21.0
+	github.com/wneessen/go-mail v0.7.3
 	golang.org/x/crypto v0.52.0
 )
 
@@ -27,7 +30,6 @@ require (
 	github.com/gin-contrib/sse v1.1.1 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.30.2 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect

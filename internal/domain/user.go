@@ -27,15 +27,15 @@ func (u *User) UnmarshalBinary(data []byte) error {
 }
 
 type CreateUserInput struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	FullName string `json:"full_name" binding:"required,min=2,max=100"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Username string `json:"username" validator:"required,min=3,max=50"`
+	FullName string `json:"full_name" validator:"required,min=2,max=100"`
+	Email    string `json:"email" validator:"required,email"`
+	Password string `json:"password" validator:"required,min=8"`
 }
 
 type SignInInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username string `json:"username" validator:"required"`
+	Password string `json:"password" validator:"required"`
 }
 
 type GetMeParams struct {

@@ -74,9 +74,10 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// respond a handler which creates email for owner with next
 func (h *Handler) respond(c *gin.Context) {
 	var input struct {
-		VacancyID string `json:"vacancy_id" binding:"required"`
+		VacancyID string `json:"vacancy_id" validator:"required"`
 		domain.ApplicantsFormInput
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {

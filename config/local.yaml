@@ -1,4 +1,7 @@
 env: "local"
+allow_origins:
+  - http://localhost:3000
+  - http://localhost:5173
 http_server:
   address: "localhost:8080"
   timeout: 4s
@@ -20,3 +23,7 @@ redis:
 token:
   access_ttl: 15m
   refresh_ttl: 168h
+smtp:
+  host: "smtp.yandex.ru"
+  enable_ssl: "SSL"
+  port: 587

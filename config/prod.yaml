@@ -1,4 +1,6 @@
 env: "prod"
+allow_origins:
+  - 
 http_server:
   address: "localhost:8000"
   timeout: 5s
@@ -20,3 +22,7 @@ redis:
 token:
   access_ttl: 15m
   refresh_ttl: 168h
+smtp:
+  host: "smtp.ya.ru"
+  ssl_enable: "SSL"
+  port: 465

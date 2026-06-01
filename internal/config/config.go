@@ -8,11 +8,13 @@ import (
 )
 
 type Config struct {
-	Env         string `yaml:"env" env-default:"local"`
-	HttpServer  `yaml:"http_server"`
-	DBSettings  `yaml:"db"`
-	RedisServer `yaml:"redis"`
-	Token       `yaml:"token"`
+	Env          string   `yaml:"env" env-default:"local"`
+	AllowOrigins []string `yaml:"allow_origins" env-default:"*"`
+	HttpServer   `yaml:"http_server"`
+	DBSettings   `yaml:"db"`
+	RedisServer  `yaml:"redis"`
+	Token        `yaml:"token"`
+	SMTP         `yaml:"smtp"`
 }
 
 type HttpServer struct {
@@ -50,6 +52,15 @@ type Token struct {
 	RefreshTTL   time.Duration `yaml:"refresh_ttl" env-default:"168h"`
 }
 
+type SMTP struct {
+	Host      string `yaml:"host" env-default:"smtp.yandex.ru"`
+	Port      int    `yaml:"port" env-default:"587"`
+	Username  string
+	Password  string
+	From      string
+	WorkEmail string
+}
+
 // Load reads public configuration from a YAML file and secrets from an env file.
 //
 //	configFile — path to the YAML file, e.g. "config/local.yaml"
@@ -59,6 +70,8 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv := viper.New()
 	yv.SetConfigFile(configFile)
 	yv.SetConfigType("yaml")
+	yv.SetDefault("env", "local")
+	yv.SetDefault("allow_origins", []string{"*"})
 	yv.SetDefault("http_server.address", "localhost:8080")
 	yv.SetDefault("http_server.timeout", 4*time.Second)
 	yv.SetDefault("http_server.idle_timeout", time.Minute)
@@ -74,6 +87,8 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv.SetDefault("redis.ttl.auth_timeout", 5*time.Minute)
 	yv.SetDefault("token.access_ttl", 15*time.Minute)
 	yv.SetDefault("token.refresh_ttl", 168*time.Hour)
+	yv.SetDefault("smtp.host", "smtp.yandex.ru")
+	yv.SetDefault("smtp.port", 587)
 
 	if err := yv.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("config: read yaml %q: %w", configFile, err)
@@ -90,6 +105,7 @@ func Load(configFile, envFile string) (*Config, error) {
 	// ── Assemble ──────────────────────────────────────────────────────────────
 	cfg := &Config{}
 	cfg.Env = yv.GetString("env")
+	cfg.AllowOrigins = yv.GetStringSlice("allow_origins")
 
 	cfg.HttpServer.Address = yv.GetString("http_server.address")
 	cfg.HttpServer.Timeout = yv.GetDuration("http_server.timeout")
@@ -114,6 +130,13 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.Token.PasetoKeyHex = ev.GetString("PASETO_KEY")
 	cfg.Token.AccessTTL = yv.GetDuration("token.access_ttl")
 	cfg.Token.RefreshTTL = yv.GetDuration("token.refresh_ttl")
+
+	cfg.SMTP.Host = yv.GetString("smtp.host")
+	cfg.SMTP.Port = yv.GetInt("smtp.port")
+	cfg.SMTP.Username = ev.GetString("SMTP_USERNAME")
+	cfg.SMTP.Password = ev.GetString("SMTP_PASSWORD")
+	cfg.SMTP.From = ev.GetString("SMTP_FROM")
+	cfg.SMTP.WorkEmail = ev.GetString("WORK_EMAIL")
 
 	return cfg, nil
 }

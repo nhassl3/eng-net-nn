@@ -3,6 +3,7 @@
 .idea/
 bin/
 *.md.plan
-vectorized-mixing-chipmunk.md
 redis-config/users.acl
 redis-config/redis.conf
+yandex-email-cfg.txt
+.claude/

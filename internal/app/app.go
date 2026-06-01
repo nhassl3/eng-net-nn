@@ -13,6 +13,7 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/service"
 	handle "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
+	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 	"github.com/nhassl3/IpBuild-backend/pkg/postgres"
 	redis2 "github.com/nhassl3/IpBuild-backend/pkg/redis"
 )
@@ -23,6 +24,8 @@ type Server struct {
 
 func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	ctx := context.Background()
+
+	logger.Info("Allow-Origins", slog.Any("allow_origins", cfg.AllowOrigins))
 
 	dsn := postgres.DSN(
 		cfg.DBSettings.Host,
@@ -66,14 +69,27 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	accessManagerWithBL := auth.NewBlacklistedTokenManager(accessMaker, blacklistRepo)
 	refreshManagerWithBL := auth.NewBlacklistedTokenManager(refreshMaker, blacklistRepo)
 
-	services := service.NewService(repo, authRedis, accessManagerWithBL, refreshManagerWithBL, blacklistRepo)
+	var notifier mailer.Notifier
+	if cfg.SMTP.Host != "" {
+		notifier, err = mailer.NewSMTPMailer(
+			cfg.SMTP.Host, cfg.SMTP.Username, cfg.SMTP.Password,
+			cfg.SMTP.From, cfg.SMTP.WorkEmail, cfg.SMTP.Port,
+		)
+		if err != nil {
+			return fmt.Errorf("app: create SMTP mailer: %w", err)
+		}
+	} else {
+		notifier = &mailer.NoopNotifier{}
+	}
+
+	services := service.NewService(repo, authRedis, accessManagerWithBL, refreshManagerWithBL, blacklistRepo, notifier)
 
 	handler := handle.NewHandler(services, logger)
 
 	s.httpServer = &http.Server{
 		Addr:           cfg.HttpServer.Address,
 		MaxHeaderBytes: 1 << 20,
-		Handler:        handler.InitRoutes(cfg.Env),
+		Handler:        handler.InitRoutes(cfg.Env, cfg.AllowOrigins),
 		ReadTimeout:    cfg.HttpServer.Timeout,
 		WriteTimeout:   cfg.HttpServer.Timeout,
 		IdleTimeout:    cfg.HttpServer.IdleTimeout,
