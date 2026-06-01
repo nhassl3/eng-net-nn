@@ -14,6 +14,7 @@ type Querier interface {
 	AddAdmin(ctx context.Context, dollar_1 uuid.UUID) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVacancy(ctx context.Context, arg CreateVacancyParams) (Vacancy, error)
+	ExistsDirection(ctx context.Context, id int32) (bool, error)
 	GetPlan(ctx context.Context, id uuid.UUID) (Plan, error)
 	GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error)
 	GetUser(ctx context.Context, arg GetUserParams) (User, error)

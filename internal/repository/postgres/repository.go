@@ -25,13 +25,14 @@ type Vacancies interface {
 	CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error)
 	UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error
 	DeleteVacancy(ctx context.Context, vacancyId string) error
-	
+
 	RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 }
 
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error)
 	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
+	ExistsDirection(ctx context.Context, directionId int32) (bool, error)
 }
 
 type Repository struct {

@@ -61,6 +61,10 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan
 	}, nil
 }
 
+func (r *PlanRepo) ExistsDirection(ctx context.Context, directionId int32) (bool, error) {
+	return r.db.ExistsDirection(ctx, directionId)
+}
+
 func mapPlan(plan db.Plan) domain.Plan {
 	return domain.Plan{
 		UUID:            uuid2String(plan.ID),

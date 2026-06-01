@@ -6,3 +6,6 @@ SELECT * FROM link_user_with_plan WHERE plan_id=$1;
 
 -- name: GetPlan :one
 SELECT * FROM plan WHERE id=$1;
+
+-- name: ExistsDirection :one
+SELECT EXISTS(SELECT 1 FROM directions WHERE id=$1);

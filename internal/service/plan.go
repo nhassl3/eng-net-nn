@@ -21,6 +21,13 @@ func NewPlanService(repo postgres.Plan, mailer mailer.Notifier) *PlanService {
 // CreatePlan saves the plan request to the DB and asynchronously notifies the
 // owner by email. SMTP errors are logged but do not fail the request.
 func (s *PlanService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error) {
+	if exists, err := s.repo.ExistsDirection(ctx, plan.Direction); !exists {
+		if err != nil {
+			return nil, fmt.Errorf("plan_serivce.CreatePlan: failed to load direction: %w", err)
+		}
+		return nil, domain.ErrDirectionNotFound
+	}
+
 	result, err := s.repo.CreatePlan(ctx, plan)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)

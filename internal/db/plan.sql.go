@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const existsDirection = `-- name: ExistsDirection :one
+SELECT EXISTS(SELECT 1 FROM directions WHERE id=$1)
+`
+
+func (q *Queries) ExistsDirection(ctx context.Context, id int32) (bool, error) {
+	row := q.db.QueryRow(ctx, existsDirection, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getPlan = `-- name: GetPlan :one
 SELECT id, full_name, direction, task_description, email, created_at FROM plan WHERE id=$1
 `
