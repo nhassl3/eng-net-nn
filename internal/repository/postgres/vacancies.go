@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
@@ -35,7 +37,7 @@ func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*doma
 		ID: uuidPtr2Nullable(vacancyId),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy id: %w", err)
+		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy: %w", err)
 	}
 	domainVacancy := mapVacancy(vacancy)
 	return &domainVacancy, nil
@@ -132,6 +134,12 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId string, 
 		VacancyID:   string2UUID(vacancyId),
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return "", domain.ErrRespondAlreadyExists
+			}
+		}
 		return "", fmt.Errorf("vacancies_repo.RespondToVacancy: %w", err)
 	}
 	return uuid2String(userRespondId), nil

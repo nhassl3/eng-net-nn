@@ -14,7 +14,9 @@ func handleError(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrUserAlreadyExists),
 		errors.Is(err, domain.ErrVacanciesAlreadyExists),
 		errors.Is(err, domain.ErrVacanciesAlreadyRespond),
-		errors.Is(err, domain.ErrPlanRequestAlreadyExists):
+		errors.Is(err, domain.ErrPlanRequestAlreadyExists),
+		errors.Is(err, domain.ErrRespondAlreadyExists),
+		errors.Is(err, domain.ErrVacancyAlreadyExists):
 		NewErrorResponse(c, http.StatusConflict, err.Error())
 
 	case errors.Is(err, domain.ErrInvalidCredentials),

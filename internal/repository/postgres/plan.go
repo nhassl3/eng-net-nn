@@ -61,8 +61,19 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan
 	}, nil
 }
 
-func (r *PlanRepo) ExistsDirection(ctx context.Context, directionId int32) (bool, error) {
-	return r.db.ExistsDirection(ctx, directionId)
+func (r *PlanRepo) GetDirection(ctx context.Context, directionId int32) (string, error) {
+	name, err := r.db.GetDirection(ctx, directionId)
+	if err != nil {
+		return "", fmt.Errorf("plan_repository.GetDirection: %w", err)
+	}
+	return name.String, nil
+}
+
+func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string) error {
+	return r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
+		UserID: string2UUID(userId),
+		PlanID: string2UUID(planId),
+	})
 }
 
 func mapPlan(plan db.Plan) domain.Plan {

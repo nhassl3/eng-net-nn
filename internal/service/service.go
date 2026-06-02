@@ -34,7 +34,7 @@ type Vacancies interface {
 
 // Plan service — individual plan requests
 type Plan interface {
-	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error)
+	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error)
 	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
 }
 

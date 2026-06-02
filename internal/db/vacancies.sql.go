@@ -91,7 +91,7 @@ func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]V
 const getVacancy = `-- name: GetVacancy :one
 SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at FROM vacancies WHERE
                             ($1::uuid IS NULL OR id=$1::uuid)
-                            AND ($2::varchar IS NULL OR id=$2::varchar)
+                            AND ($2::varchar IS NULL OR name=$2::varchar)
 `
 
 type GetVacancyParams struct {

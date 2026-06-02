@@ -15,12 +15,18 @@ func (h *Handler) requestPlan(c *gin.Context) {
 		return
 	}
 
-	plan, err := h.services.Plan.CreatePlan(c.Request.Context(), &input)
+	var userId *string
+	if id := h.middleware.GetUserIdByToken(c); id != "" {
+		userId = &id
+	}
+
+	plan, err := h.services.Plan.CreatePlan(c.Request.Context(), &input, userId)
 	if err != nil {
 		h.logger.Error("requestPlan", slog.String("err", err.Error()))
 		handleError(c, err)
 		return
 	}
+
 	c.JSON(http.StatusCreated, plan)
 }
 

@@ -32,7 +32,8 @@ type Vacancies interface {
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error)
 	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
-	ExistsDirection(ctx context.Context, directionId int32) (bool, error)
+	GetDirection(ctx context.Context, directionId int32) (string, error)
+	CreateLinkRequest(ctx context.Context, userId, planId string) error
 }
 
 type Repository struct {

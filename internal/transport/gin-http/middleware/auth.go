@@ -70,6 +70,29 @@ func (i *AuthInterceptor) AdminIdentity(c *gin.Context) {
 	c.Next()
 }
 
+func (i *AuthInterceptor) GetUserIdByToken(c *gin.Context) string {
+	header := c.GetHeader(authorizationHeader)
+	if header == "" {
+		return ""
+	}
+
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		return ""
+	}
+
+	tokenStr := parts[1]
+	user, err := i.s.ParseToken(c.Request.Context(), tokenStr)
+	if err != nil {
+		return ""
+	}
+	if user == nil {
+		return ""
+	}
+
+	return user.UUID
+}
+
 type errorResponse struct {
 	Message string `json:"message"`
 }
@@ -78,7 +101,7 @@ func newErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.AbortWithStatusJSON(statusCode, errorResponse{message})
 }
 
-func getUserId(c *gin.Context) (string, error) {
+func GetUserId(c *gin.Context) (string, error) {
 	id, ok := c.Get(userCtx)
 	if !ok {
 		newErrorResponse(c, http.StatusUnauthorized, "user not found in context")

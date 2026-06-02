@@ -24,3 +24,10 @@ type CreatePlanInput struct {
 	TaskDescription string `json:"task_description"`
 	EmailToFeedback string `json:"email_to_feedback"`
 }
+
+type CreatePlanInputEmail struct {
+	FullName        string `json:"full_name"`
+	Direction       string `json:"direction"`
+	TaskDescription string `json:"task_description"`
+	EmailToFeedback string `json:"email_to_feedback"`
+}

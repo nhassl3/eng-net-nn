@@ -12,15 +12,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const existsDirection = `-- name: ExistsDirection :one
-SELECT EXISTS(SELECT 1 FROM directions WHERE id=$1)
+const createLinkRequest = `-- name: CreateLinkRequest :exec
+INSERT INTO link_user_with_plan (user_id, plan_id) VALUES ($1, $2)
 `
 
-func (q *Queries) ExistsDirection(ctx context.Context, id int32) (bool, error) {
-	row := q.db.QueryRow(ctx, existsDirection, id)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
+type CreateLinkRequestParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	PlanID uuid.UUID `json:"plan_id"`
+}
+
+func (q *Queries) CreateLinkRequest(ctx context.Context, arg CreateLinkRequestParams) error {
+	_, err := q.db.Exec(ctx, createLinkRequest, arg.UserID, arg.PlanID)
+	return err
+}
+
+const getDirection = `-- name: GetDirection :one
+SELECT name FROM directions WHERE id=$1
+`
+
+func (q *Queries) GetDirection(ctx context.Context, id int32) (pgtype.Text, error) {
+	row := q.db.QueryRow(ctx, getDirection, id)
+	var name pgtype.Text
+	err := row.Scan(&name)
+	return name, err
 }
 
 const getPlan = `-- name: GetPlan :one

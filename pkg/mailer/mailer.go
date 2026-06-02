@@ -14,7 +14,9 @@ import (
 
 type Notifier interface {
 	NotifyNewApplicant(ctx context.Context, vacancyName string, form *domain.ApplicantsFormInput) error
-	NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInput) error
+	NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInputEmail) error
+	NotifyUserAboutVacancy(ctx context.Context, vacancyName, userEmail string) error
+	NotifyUserAboutPlan(ctx context.Context, userEmail string) error
 	Close(ctx context.Context) error
 }
 
@@ -22,12 +24,22 @@ type Notifier interface {
 // Used when SMTP host is not configured (e.g. local dev).
 type NoopNotifier struct{}
 
+func (n *NoopNotifier) NotifyUserAboutVacancy(_ context.Context, vacancyName, userEmail string) error {
+	slog.Info("mailer: noop - for user new applicant", slog.String("vacancy", vacancyName), slog.String("email", userEmail))
+	return nil
+}
+
+func (n *NoopNotifier) NotifyUserAboutPlan(_ context.Context, userEmail string) error {
+	slog.Info("mailer: noop - for user new plan request", slog.String("email", userEmail))
+	return nil
+}
+
 func (n *NoopNotifier) NotifyNewApplicant(_ context.Context, vacancyName string, form *domain.ApplicantsFormInput) error {
 	slog.Info("mailer: noop — new applicant", slog.String("vacancy", vacancyName), slog.String("email", form.Email))
 	return nil
 }
 
-func (n *NoopNotifier) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInput) error {
+func (n *NoopNotifier) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInputEmail) error {
 	slog.Info("mailer: noop — new plan request", slog.String("name", plan.FullName), slog.String("email", plan.EmailToFeedback))
 	return nil
 }
@@ -38,6 +50,7 @@ type job struct {
 	subject string
 	body    string
 	replyTo string
+	toUser  bool
 }
 
 const (
@@ -98,8 +111,14 @@ func (m *SMTPMailer) worker() {
 	defer m.wg.Done()
 	for j := range m.queue {
 		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
-		if err := m.send(ctx, j.subject, j.body, j.replyTo); err != nil {
-			m.logger.Error("mailer: send failed", sl.ErrLog(err))
+		if j.toUser {
+			if err := m.sendToUser(ctx, j.subject, j.body, j.replyTo); err != nil {
+				m.logger.Error("mailer: send to user failed", sl.ErrLog(err))
+			}
+		} else {
+			if err := m.sendToOwner(ctx, j.subject, j.body, j.replyTo); err != nil {
+				m.logger.Error("mailer: send to owner failed", sl.ErrLog(err))
+			}
 		}
 		cancel()
 	}
@@ -130,11 +149,8 @@ func (m *SMTPMailer) Close(ctx context.Context) error {
 	}
 }
 
-func (m *SMTPMailer) send(ctx context.Context, subject, htmlBody, replyTo string) error {
+func (m *SMTPMailer) sendToOwner(ctx context.Context, subject, htmlBody, replyTo string) error {
 	msg := mail.NewMsg()
-	if err := msg.From(m.from); err != nil {
-		return fmt.Errorf("mailer.send: from: %w", err)
-	}
 	if err := msg.To(m.ownerEmail); err != nil {
 		return fmt.Errorf("mailer.send: to: %w", err)
 	}
@@ -142,6 +158,21 @@ func (m *SMTPMailer) send(ctx context.Context, subject, htmlBody, replyTo string
 		if err := msg.ReplyTo(replyTo); err != nil {
 			return fmt.Errorf("mailer.send: reply-to: %w", err)
 		}
+	}
+	return m.send(ctx, msg, subject, htmlBody)
+}
+
+func (m *SMTPMailer) sendToUser(ctx context.Context, subject, htmlBody, userEmail string) error {
+	msg := mail.NewMsg()
+	if err := msg.To(userEmail); err != nil {
+		return fmt.Errorf("mailer.send: to: %w", err)
+	}
+	return m.send(ctx, msg, subject, htmlBody)
+}
+
+func (m *SMTPMailer) send(ctx context.Context, msg *mail.Msg, subject, htmlBody string) error {
+	if err := msg.From(m.from); err != nil {
+		return fmt.Errorf("mailer.send: from: %w", err)
 	}
 	msg.Subject(subject)
 	msg.SetBodyString(mail.TypeTextHTML, htmlBody)
@@ -185,7 +216,7 @@ func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, f
 	return nil
 }
 
-func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInput) error {
+func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInputEmail) error {
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
@@ -197,7 +228,7 @@ func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInp
     <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Email для связи</td>
         <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Направление</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%d</td></tr>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
     <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Описание задачи</td>
         <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
   </table>
@@ -206,5 +237,31 @@ func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInp
 		plan.FullName, plan.EmailToFeedback, plan.Direction, plan.TaskDescription,
 	)
 	m.enqueue(job{subject: "Новая заявка на разработку плана", body: body, replyTo: plan.EmailToFeedback})
+	return nil
+}
+
+func (m *SMTPMailer) NotifyUserAboutVacancy(_ context.Context, vacancyName, userEmail string) error {
+	body := fmt.Sprintf(`<!DOCTYPE html>
+	<html>
+	<head><meta charset="UTF-8"></head>
+	<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
+	  <h2 style="color:#2563eb">Рассмотрение Вашего отклика началось!</h2>
+	</body>
+	</html>
+	`)
+	m.enqueue(job{subject: fmt.Sprintf("Отклик на вакансию %s", vacancyName), body: body, replyTo: userEmail, toUser: true})
+	return nil
+}
+
+func (m *SMTPMailer) NotifyUserAboutPlan(_ context.Context, userEmail string) error {
+	body := fmt.Sprintf(`<!DOCTYPE html>
+	<html>
+	<head><meta charset="UTF-8"></head>
+	<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
+	  <h2 style="color:#2563eb">Рассмотрение Вашего плана началось! Спасибо, что выбираете IpBuild Unet!</h2>
+	</body>
+	</html>
+	`)
+	m.enqueue(job{subject: "Рассмотрение Вашего плана", body: body, replyTo: userEmail, toUser: true})
 	return nil
 }

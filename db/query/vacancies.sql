@@ -4,7 +4,7 @@ SELECT * FROM vacancies LIMIT $1 OFFSET $2;
 -- name: GetVacancy :one
 SELECT * FROM vacancies WHERE
                             (sqlc.narg('id')::uuid IS NULL OR id=sqlc.narg('id')::uuid)
-                            AND (sqlc.narg('name')::varchar IS NULL OR id=sqlc.narg('name')::varchar);
+                            AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar);
 
 -- name: CreateVacancy :one
 INSERT INTO vacancies (jd, name, description, required_exp, pay_day, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;

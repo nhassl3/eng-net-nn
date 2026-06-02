@@ -27,8 +27,6 @@ type Server struct {
 func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	ctx := context.Background()
 
-	logger.Info("Allow-Origins", slog.Any("allow_origins", cfg.AllowOrigins))
-
 	dsn := postgres.DSN(
 		cfg.DBSettings.Host,
 		cfg.DBSettings.Port,

@@ -63,24 +63,24 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 		auth.POST("/refresh", h.refresh)
 	}
 
-	api := router.Group("/api", h.middleware.UserIdentity)
+	api := router.Group("/api")
 	{
-		api.POST("/logout", h.logout)
+		api.POST("/logout", h.middleware.UserIdentity, h.logout)
 
 		vacancies := api.Group("/vacancies")
 		{
 			vacancies.GET("/", h.getAllVacancies)
 			vacancies.GET("/:id", h.getVacancy)
-			vacancies.POST("/", h.middleware.AdminIdentity, h.createVacancy)
-			vacancies.PUT("/:id", h.middleware.AdminIdentity, h.updateVacancy)
-			vacancies.DELETE("/:id", h.middleware.AdminIdentity, h.deleteVacancy)
+			vacancies.POST("/", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.createVacancy)
+			vacancies.PUT("/:id", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.updateVacancy)
+			vacancies.DELETE("/:id", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.deleteVacancy)
 			vacancies.POST("/respond", h.respond)
 		}
 
 		plan := api.Group("/plan")
 		{
 			plan.POST("/", h.requestPlan)
-			plan.GET("/:id", h.getResponseFromRequest)
+			plan.GET("/:id", h.middleware.UserIdentity, h.getResponseFromRequest)
 		}
 	}
 

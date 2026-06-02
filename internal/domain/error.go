@@ -14,4 +14,6 @@ var (
 	ErrInvalidCredentials       = errors.New("invalid credentials")
 	ErrRedisNotFound            = errors.New("redis not found")
 	ErrDirectionNotFound        = errors.New("direction not found")
+	ErrRespondAlreadyExists     = errors.New("respond already exists")
+	ErrVacancyAlreadyExists     = errors.New("vacancy already exists")
 )

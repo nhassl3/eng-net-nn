@@ -1,6 +1,6 @@
 .PHONY: build run runb test lint mock sqlc migrate-up migrate-down migrate-force clean docker-build postgres opendb dropdb createdb generate-data redis cli-redis minio minio-stop
 
-.DEFAULT_GOAL := build
+.DEFAULT_GOAL := runb
 
 # Load secrets from .env (DB_USER, DB_PASSWORD, DB_NAME, PASETO_KEY)
 ifneq (,$(wildcard ./.env))
