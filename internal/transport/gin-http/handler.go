@@ -71,9 +71,6 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 		{
 			vacancies.GET("/", h.getAllVacancies)
 			vacancies.GET("/:id", h.getVacancy)
-			vacancies.POST("/", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.createVacancy)
-			vacancies.PUT("/:id", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.updateVacancy)
-			vacancies.DELETE("/:id", h.middleware.UserIdentity, h.middleware.AdminIdentity, h.deleteVacancy)
 			vacancies.POST("/respond", h.respond)
 		}
 
@@ -81,6 +78,25 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 		{
 			plan.POST("/", h.requestPlan)
 			plan.GET("/:id", h.middleware.UserIdentity, h.getResponseFromRequest)
+		}
+
+		admin := api.Group("/admin", h.middleware.UserIdentity, h.middleware.AdminIdentity)
+		{
+			vacanciesAdmin := admin.Group("/vacancies")
+			{
+				vacanciesAdmin.POST("/", h.createVacancy)
+				vacanciesAdmin.PUT("/:id", h.updateVacancy)
+				vacanciesAdmin.DELETE("/:id", h.deleteVacancy)
+
+				vacanciesAdmin.GET("/", h.getRespondVacancies)
+				vacanciesAdmin.GET("/:id", h.getRespondVacancy)
+			}
+
+			planAdmin := admin.Group("/plans")
+			{
+				planAdmin.GET("/", h.getAllPlans)
+				planAdmin.GET("/:id", h.getPlan)
+			}
 		}
 	}
 

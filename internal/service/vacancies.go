@@ -10,15 +10,17 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
+	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
 
 type VacanciesService struct {
-	repo   postgres.Vacancies
-	mailer mailer.Notifier
+	repo        postgres.Vacancies
+	mailer      mailer.Notifier
+	minioClient minio.ByteStorage
 }
 
-func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier) *VacanciesService {
-	return &VacanciesService{repo: repo, mailer: mailer}
+func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, miniClient minio.ByteStorage) *VacanciesService {
+	return &VacanciesService{repo: repo, mailer: mailer, minioClient: miniClient}
 }
 
 func (s *VacanciesService) List(ctx context.Context) (*domain.Vacancies, error) {
@@ -90,4 +92,26 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 	}
 
 	return nil
+}
+
+func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
+	respondVacancies, err := s.repo.GetRespondVacancies(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRespondVacanciesNotExists
+		}
+		return nil, fmt.Errorf("vacancies_service.GetRespondVacancies: %w", err)
+	}
+	return respondVacancies, nil
+}
+
+func (s *VacanciesService) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
+	respondVacancy, err := s.repo.GetRespondVacancy(ctx, respondVacancyId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrRespondVacancyNotExists
+		}
+		return nil, fmt.Errorf("vacancies_service.GetRespondVacancy: %w", err)
+	}
+	return respondVacancy, nil
 }

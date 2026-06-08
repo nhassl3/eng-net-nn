@@ -27,7 +27,9 @@ func handleError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrVacanciesNotExists),
 		errors.Is(err, domain.ErrPlanRequestNotExists),
 		errors.Is(err, domain.ErrVacancyNotExists),
-		errors.Is(err, domain.ErrDirectionNotFound):
+		errors.Is(err, domain.ErrDirectionNotFound),
+		errors.Is(err, domain.ErrRespondVacanciesNotExists),
+		errors.Is(err, domain.ErrRespondVacancyNotExists):
 		NewErrorResponse(c, http.StatusNotFound, err.Error())
 
 	default:

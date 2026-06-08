@@ -15,6 +15,7 @@ type Config struct {
 	RedisServer  `yaml:"redis"`
 	Token        `yaml:"token"`
 	SMTP         `yaml:"smtp"`
+	MinIO        `yaml:"minio"`
 }
 
 type HttpServer struct {
@@ -61,6 +62,15 @@ type SMTP struct {
 	WorkEmail string
 }
 
+type MinIO struct {
+	PublicUrl string
+	Endpoint  string `yaml:"endpoint" env-default:"localhost:9000"`
+	AccessKey string
+	SecretKey string
+	Bucket    string `yaml:"bucket" env-default:"ipbuild-unet-bucket"`
+	UseSSL    bool   `yaml:"use_ssl" env-default:"false"`
+}
+
 // Load reads public configuration from a YAML file and secrets from an env file.
 //
 //	configFile — path to the YAML file, e.g. "config/local.yaml"
@@ -89,6 +99,9 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv.SetDefault("token.refresh_ttl", 168*time.Hour)
 	yv.SetDefault("smtp.host", "smtp.yandex.ru")
 	yv.SetDefault("smtp.port", 587)
+	yv.SetDefault("minio.endpoint", "localhost:9000")
+	yv.SetDefault("minio.use_ssl", false)
+	yv.SetDefault("minio.bucket", "ipbuild-unet-bucket")
 
 	if err := yv.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("config: read yaml %q: %w", configFile, err)
@@ -137,6 +150,13 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.SMTP.Password = ev.GetString("SMTP_PASSWORD")
 	cfg.SMTP.From = ev.GetString("SMTP_FROM")
 	cfg.SMTP.WorkEmail = ev.GetString("WORK_EMAIL")
+
+	cfg.MinIO.PublicUrl = ev.GetString("MINIO_PUBLIC_URL")
+	cfg.MinIO.Endpoint = yv.GetString("minio.endpoint")
+	cfg.MinIO.AccessKey = ev.GetString("MINIO_ACCESS_KEY")
+	cfg.MinIO.SecretKey = ev.GetString("MINIO_SECRET_KEY")
+	cfg.MinIO.Bucket = yv.GetString("minio.bucket")
+	cfg.MinIO.UseSSL = yv.GetBool("minio.use_ssl")
 
 	return cfg, nil
 }

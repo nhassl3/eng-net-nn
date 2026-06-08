@@ -145,6 +145,26 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId string, 
 	return uuid2String(userRespondId), nil
 }
 
+func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
+	respondVacancies, err := r.db.GetRespondVacancies(ctx, db.GetRespondVacanciesParams{
+		Limit:  100,
+		Offset: 0,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
+	}
+	return mapRespondVacancies(respondVacancies), nil
+}
+
+func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
+	respondVacancy, err := r.db.GetRespondVacancy(ctx, string2UUID(respondVacancyId))
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
+	}
+	domainRespondVacancy := mapRespondVacancy(respondVacancy)
+	return &domainRespondVacancy, nil
+}
+
 func mapVacancies(vacancies []db.Vacancy) *domain.Vacancies {
 	domainVacancies := make([]domain.Vacancy, len(vacancies))
 	for i := range vacancies {
@@ -166,5 +186,30 @@ func mapVacancy(v db.Vacancy) domain.Vacancy {
 		Skills:      v.Skills,
 		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
 		UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+	}
+}
+
+func mapRespondVacancies(respondVacancies []db.UserRespond) *domain.RespondVacancies {
+	domainRespondVacancies := make([]domain.RespondVacancy, len(respondVacancies))
+	for i := range respondVacancies {
+		domainRespondVacancies[i] = mapRespondVacancy(respondVacancies[i])
+	}
+	return &domain.RespondVacancies{
+		Total:            len(respondVacancies),
+		RespondVacancies: domainRespondVacancies,
+	}
+}
+
+func mapRespondVacancy(v db.UserRespond) domain.RespondVacancy {
+	return domain.RespondVacancy{
+		UUID:        uuid2String(v.ID),
+		FullName:    v.FullName,
+		Email:       v.Email,
+		PhoneNumber: v.PhoneNumber.String,
+		City:        v.City.String,
+		Exp:         v.Exp.String,
+		Description: v.Description.String,
+		VacancyId:   uuid2String(v.VacancyID),
+		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
 	}
 }

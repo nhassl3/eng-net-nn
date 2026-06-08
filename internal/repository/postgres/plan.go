@@ -76,6 +76,19 @@ func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string)
 	})
 }
 
+// GetAllPlans returns plans
+// TODO: set pages
+func (r *PlanRepo) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
+	allUsersPlans, err := r.db.GetAllPlans(ctx, db.GetAllPlansParams{
+		Limit:  100,
+		Offset: 0,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
+	}
+	return mapPlans(allUsersPlans), nil
+}
+
 func mapPlan(plan db.Plan) domain.Plan {
 	return domain.Plan{
 		UUID:            uuid2String(plan.ID),
@@ -84,5 +97,16 @@ func mapPlan(plan db.Plan) domain.Plan {
 		TaskDescription: plan.TaskDescription.String,
 		EmailToFeedback: plan.Email,
 		CreatedAt:       pgTimeTZ(plan.CreatedAt, time.UTC),
+	}
+}
+
+func mapPlans(plans []db.Plan) *domain.Plans {
+	domainPlan := make([]domain.Plan, len(plans))
+	for i := range plans {
+		domainPlan[i] = mapPlan(plans[i])
+	}
+	return &domain.Plans{
+		Plans: domainPlan,
+		Total: len(plans),
 	}
 }

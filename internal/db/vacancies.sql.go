@@ -49,6 +49,68 @@ func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (V
 	return i, err
 }
 
+const getRespondVacancies = `-- name: GetRespondVacancies :many
+SELECT id, full_name, phone_number, email, city, exp, description, resume, vacancy_id, created_at FROM user_responds LIMIT $1 OFFSET $2
+`
+
+type GetRespondVacanciesParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetRespondVacancies(ctx context.Context, arg GetRespondVacanciesParams) ([]UserRespond, error) {
+	rows, err := q.db.Query(ctx, getRespondVacancies, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []UserRespond{}
+	for rows.Next() {
+		var i UserRespond
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.PhoneNumber,
+			&i.Email,
+			&i.City,
+			&i.Exp,
+			&i.Description,
+			&i.Resume,
+			&i.VacancyID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRespondVacancy = `-- name: GetRespondVacancy :one
+SELECT id, full_name, phone_number, email, city, exp, description, resume, vacancy_id, created_at FROM user_responds WHERE id=$1 LIMIT 1
+`
+
+func (q *Queries) GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserRespond, error) {
+	row := q.db.QueryRow(ctx, getRespondVacancy, id)
+	var i UserRespond
+	err := row.Scan(
+		&i.ID,
+		&i.FullName,
+		&i.PhoneNumber,
+		&i.Email,
+		&i.City,
+		&i.Exp,
+		&i.Description,
+		&i.Resume,
+		&i.VacancyID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getVacancies = `-- name: GetVacancies :many
 SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at FROM vacancies LIMIT $1 OFFSET $2
 `

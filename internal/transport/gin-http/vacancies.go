@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
@@ -91,4 +92,25 @@ func (h *Handler) respond(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "response submitted"})
+}
+
+func (h *Handler) getRespondVacancies(c *gin.Context) {
+	respondVacancies, err := h.services.Vacancies.GetRespondVacancies(c.Request.Context())
+	if err != nil {
+		h.logger.Error("getRespondVacancies", sl.ErrLog(err))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, respondVacancies)
+}
+
+func (h *Handler) getRespondVacancy(c *gin.Context) {
+	id := c.Param("id")
+	respondVacancy, err := h.services.Vacancies.GetRespondVacancy(c.Request.Context(), id)
+	if err != nil {
+		h.logger.Error("getRespondVacancy", sl.ErrLog(err))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, respondVacancy)
 }

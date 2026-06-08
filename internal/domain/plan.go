@@ -13,6 +13,11 @@ type Plan struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+type Plans struct {
+	Plans []Plan `json:"plans"`
+	Total int    `json:"total"`
+}
+
 type UserPlan struct {
 	*User `json:"user"`
 	*Plan `json:"plan"`

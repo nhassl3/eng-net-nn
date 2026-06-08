@@ -27,6 +27,8 @@ type Vacancies interface {
 	DeleteVacancy(ctx context.Context, vacancyId string) error
 
 	RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error)
+	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
+	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }
 
 type Plan interface {
@@ -34,6 +36,7 @@ type Plan interface {
 	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
 	GetDirection(ctx context.Context, directionId int32) (string, error)
 	CreateLinkRequest(ctx context.Context, userId, planId string) error
+	GetAllPlans(ctx context.Context) (*domain.Plans, error)
 }
 
 type Repository struct {

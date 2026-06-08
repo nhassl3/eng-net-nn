@@ -28,3 +28,9 @@ VALUES (
         sqlc.narg('description'),
         sqlc.narg('resume'),
         sqlc.arg('vacancy_id')) RETURNING id;
+
+-- name: GetRespondVacancies :many
+SELECT * FROM user_responds LIMIT $1 OFFSET $2;
+
+-- name: GetRespondVacancy :one
+SELECT * FROM user_responds WHERE id=$1 LIMIT 1;

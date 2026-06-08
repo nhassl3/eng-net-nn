@@ -16,8 +16,11 @@ type Querier interface {
 	CreateLinkRequest(ctx context.Context, arg CreateLinkRequestParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVacancy(ctx context.Context, arg CreateVacancyParams) (Vacancy, error)
+	GetAllPlans(ctx context.Context, arg GetAllPlansParams) ([]Plan, error)
 	GetDirection(ctx context.Context, id int32) (pgtype.Text, error)
 	GetPlan(ctx context.Context, id uuid.UUID) (Plan, error)
+	GetRespondVacancies(ctx context.Context, arg GetRespondVacanciesParams) ([]UserRespond, error)
+	GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserRespond, error)
 	GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error)
 	GetUser(ctx context.Context, arg GetUserParams) (User, error)
 	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]Vacancy, error)

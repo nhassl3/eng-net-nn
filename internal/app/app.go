@@ -15,6 +15,7 @@ import (
 	handle "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
+	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 	"github.com/nhassl3/IpBuild-backend/pkg/postgres"
 	redis2 "github.com/nhassl3/IpBuild-backend/pkg/redis"
 )
@@ -83,7 +84,30 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	}
 	s.notifier = notifier
 
-	services := service.NewService(repo, authRedis, accessManagerWithBL, refreshManagerWithBL, blacklistRepo, notifier)
+	minIOClient, err := minio.NewMinIO(
+		ctx,
+		cfg.MinIO.PublicUrl,
+		cfg.MinIO.Endpoint,
+		cfg.MinIO.AccessKey,
+		cfg.MinIO.SecretKey,
+		"",
+		cfg.MinIO.Bucket,
+		cfg.UseSSL,
+	)
+	if err != nil {
+		return fmt.Errorf("app: create minio client: %w", err)
+	}
+	logger.Info("Successfully connected to MinIO")
+
+	services := service.NewService(
+		repo,
+		authRedis,
+		accessManagerWithBL,
+		refreshManagerWithBL,
+		blacklistRepo,
+		notifier,
+		minIOClient,
+	)
 
 	handler := handle.NewHandler(services, logger)
 

@@ -26,8 +26,44 @@ func (q *Queries) CreateLinkRequest(ctx context.Context, arg CreateLinkRequestPa
 	return err
 }
 
+const getAllPlans = `-- name: GetAllPlans :many
+SELECT id, full_name, direction, task_description, email, created_at FROM plan LIMIT $1 OFFSET $2
+`
+
+type GetAllPlansParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetAllPlans(ctx context.Context, arg GetAllPlansParams) ([]Plan, error) {
+	rows, err := q.db.Query(ctx, getAllPlans, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Plan{}
+	for rows.Next() {
+		var i Plan
+		if err := rows.Scan(
+			&i.ID,
+			&i.FullName,
+			&i.Direction,
+			&i.TaskDescription,
+			&i.Email,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDirection = `-- name: GetDirection :one
-SELECT name FROM directions WHERE id=$1
+SELECT name FROM directions WHERE id=$1 LIMIT 1
 `
 
 func (q *Queries) GetDirection(ctx context.Context, id int32) (pgtype.Text, error) {
@@ -38,7 +74,7 @@ func (q *Queries) GetDirection(ctx context.Context, id int32) (pgtype.Text, erro
 }
 
 const getPlan = `-- name: GetPlan :one
-SELECT id, full_name, direction, task_description, email, created_at FROM plan WHERE id=$1
+SELECT id, full_name, direction, task_description, email, created_at FROM plan WHERE id=$1 LIMIT 1
 `
 
 func (q *Queries) GetPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
@@ -56,7 +92,7 @@ func (q *Queries) GetPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
 }
 
 const getResponseFromRequest = `-- name: GetResponseFromRequest :one
-SELECT user_id, plan_id FROM link_user_with_plan WHERE plan_id=$1
+SELECT user_id, plan_id FROM link_user_with_plan WHERE plan_id=$1 LIMIT 1
 `
 
 func (q *Queries) GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error) {

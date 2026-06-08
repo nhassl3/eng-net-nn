@@ -13,6 +13,23 @@ type Vacancy struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type RespondVacancies struct {
+	RespondVacancies []RespondVacancy `json:"respond_vacancies"`
+	Total            int              `json:"total"`
+}
+
+type RespondVacancy struct {
+	UUID        string    `json:"uuid"`
+	FullName    string    `json:"fullName"`
+	PhoneNumber string    `json:"phoneNumber"`
+	Email       string    `json:"email"`
+	City        string    `json:"city"`
+	Exp         string    `json:"exp"`
+	Description string    `json:"description"`
+	VacancyId   string    `json:"vacancyId"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type Vacancies struct {
 	Vacancies []Vacancy `json:"vacancies"`
 	Total     int       `json:"total"`

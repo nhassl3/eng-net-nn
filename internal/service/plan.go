@@ -81,3 +81,14 @@ func (s *PlanService) GetPlan(ctx context.Context, planId string) (*domain.UserP
 	}
 	return result, nil
 }
+
+func (s *PlanService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
+	result, err := s.repo.GetAllPlans(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrPlanRequestNotExists
+		}
+		return nil, fmt.Errorf("plan_service.GetAllPlans: %w", err)
+	}
+	return result, nil
+}

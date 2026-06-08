@@ -8,6 +8,7 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/repository/redis"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
+	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
 
 // Authorization service (create/login user, token lifecycle)
@@ -30,12 +31,15 @@ type Vacancies interface {
 	Delete(ctx context.Context, vacancyId string) error
 
 	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error
+	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
+	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }
 
 // Plan service — individual plan requests
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error)
 	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
+	GetAllPlans(ctx context.Context) (*domain.Plans, error)
 }
 
 type Service struct {
@@ -51,10 +55,11 @@ func NewService(
 	refreshMaker auth.TokenManager,
 	blacklist auth.TokenBlacklist,
 	mailer mailer.Notifier,
+	minioClient minio.ByteStorage,
 ) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
-		Vacancies:     NewVacanciesService(repos.Vacancies, mailer),
+		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient),
 		Plan:          NewPlanService(repos.Plan, mailer),
 	}
 }
