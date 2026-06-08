@@ -63,7 +63,6 @@ type SMTP struct {
 }
 
 type MinIO struct {
-	PublicUrl string
 	Endpoint  string `yaml:"endpoint" env-default:"localhost:9000"`
 	AccessKey string
 	SecretKey string
@@ -151,7 +150,6 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.SMTP.From = ev.GetString("SMTP_FROM")
 	cfg.SMTP.WorkEmail = ev.GetString("WORK_EMAIL")
 
-	cfg.MinIO.PublicUrl = ev.GetString("MINIO_PUBLIC_URL")
 	cfg.MinIO.Endpoint = yv.GetString("minio.endpoint")
 	cfg.MinIO.AccessKey = ev.GetString("MINIO_ACCESS_KEY")
 	cfg.MinIO.SecretKey = ev.GetString("MINIO_SECRET_KEY")

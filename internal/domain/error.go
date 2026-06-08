@@ -18,4 +18,6 @@ var (
 	ErrVacancyAlreadyExists      = errors.New("vacancy already exists")
 	ErrRespondVacanciesNotExists = errors.New("respond vacancies does not exists")
 	ErrRespondVacancyNotExists   = errors.New("respond vacancy does not exists")
+	ErrFileTooLarge              = errors.New("file too large")
+	ErrInvalidContentType        = errors.New("invalid content type")
 )

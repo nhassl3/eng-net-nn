@@ -86,7 +86,6 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 
 	minIOClient, err := minio.NewMinIO(
 		ctx,
-		cfg.MinIO.PublicUrl,
 		cfg.MinIO.Endpoint,
 		cfg.MinIO.AccessKey,
 		cfg.MinIO.SecretKey,

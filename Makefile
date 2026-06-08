@@ -137,7 +137,7 @@ cli-redis:
 
 ##  ─── MinIO ───────────────────────────────────────────────────────────────────
 minio:
-	@docker run -d --name minioRELEASE.2025-09-07T16-13-09Z-cpuv1 \
+	@docker run -d --name minio-$(DB_USER)-$(DB_NAME) \
 		-p 9000:9000 -p 9001:9001 \
 		-e MINIO_ROOT_USER=$(MINIO_ACCESS_KEY) \
 		-e MINIO_ROOT_PASSWORD=$(MINIO_SECRET_KEY) \

@@ -30,7 +30,7 @@ type Vacancies interface {
 	Update(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) (*domain.Vacancy, error)
 	Delete(ctx context.Context, vacancyId string) error
 
-	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error
+	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }

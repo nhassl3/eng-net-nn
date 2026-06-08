@@ -37,6 +37,9 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	// Initialize default router
 	router := gin.Default()
 
+	// Cap the memory used to buffer multipart uploads before they spill to disk.
+	router.MaxMultipartMemory = 16 << 20 // 16 MB
+
 	// Router settings
 	router.Use(gin.Recovery())        // recovery middleware for panics
 	router.Use(sloggin.New(h.logger)) // use custom logger for output messages

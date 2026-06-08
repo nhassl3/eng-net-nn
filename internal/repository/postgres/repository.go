@@ -26,7 +26,7 @@ type Vacancies interface {
 	UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error
 	DeleteVacancy(ctx context.Context, vacancyId string) error
 
-	RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error)
+	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }

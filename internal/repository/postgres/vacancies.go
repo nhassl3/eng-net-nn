@@ -122,7 +122,7 @@ func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) err
 	})
 }
 
-func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error) {
+func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error) {
 	userRespondId, err := r.db.RespondToVacancy(ctx, db.RespondToVacancyParams{
 		FullName:    applicantsForm.FullName,
 		Email:       applicantsForm.Email,
@@ -130,7 +130,7 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId string, 
 		City:        stringToNullable(applicantsForm.City),
 		Exp:         stringToNullable(applicantsForm.Exp),
 		Description: stringToNullable(applicantsForm.Description),
-		Resume:      stringToNullable(applicantsForm.Resume),
+		Resume:      stringToNullable(objectName),
 		VacancyID:   string2UUID(vacancyId),
 	})
 	if err != nil {
@@ -209,7 +209,9 @@ func mapRespondVacancy(v db.UserRespond) domain.RespondVacancy {
 		City:        v.City.String,
 		Exp:         v.Exp.String,
 		Description: v.Description.String,
-		VacancyId:   uuid2String(v.VacancyID),
-		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
+		// Raw object key; the service turns it into a presigned URL on read.
+		ResumeUrl: v.Resume.String,
+		VacancyId: uuid2String(v.VacancyID),
+		CreatedAt: pgTimeTZ(v.CreatedAt, time.UTC),
 	}
 }

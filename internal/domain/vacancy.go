@@ -1,6 +1,8 @@
 package domain
 
-import "time"
+import (
+	"time"
+)
 
 type Vacancy struct {
 	UUID        string    `json:"uuid"`
@@ -26,6 +28,7 @@ type RespondVacancy struct {
 	City        string    `json:"city"`
 	Exp         string    `json:"exp"`
 	Description string    `json:"description"`
+	ResumeUrl   string    `json:"resumeUrl"`
 	VacancyId   string    `json:"vacancyId"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -42,7 +45,10 @@ type ApplicantsFormInput struct {
 	City        string `json:"city,omitempty" validator:"required,city"`
 	Exp         string `json:"exp,omitempty"`
 	Description string `json:"description,omitempty"`
-	Resume      string `json:"resume,omitempty"` // like a link to s3 storage (minio)
+}
+
+type FileUploadInput struct {
+	FileData []byte
 }
 
 type UpdatedVacancyInput struct {
