@@ -7,3 +7,5 @@ redis-config/users.acl
 redis-config/redis.conf
 yandex-email-cfg.txt
 .claude/
+eng-net-nn-ssh-key
+eng-net-nn-ssh-key.pub
