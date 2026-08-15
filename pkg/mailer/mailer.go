@@ -13,7 +13,7 @@ import (
 )
 
 type Notifier interface {
-	NotifyNewApplicant(ctx context.Context, vacancyName string, form *domain.ApplicantsFormInput) error
+	NotifyNewApplicant(ctx context.Context, vacancyName, resumeUrl string, form *domain.ApplicantsFormInput) error
 	NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInputEmail) error
 	NotifyUserAboutVacancy(ctx context.Context, vacancyName, userEmail string) error
 	NotifyUserAboutPlan(ctx context.Context, userEmail string) error
@@ -34,7 +34,7 @@ func (n *NoopNotifier) NotifyUserAboutPlan(_ context.Context, userEmail string) 
 	return nil
 }
 
-func (n *NoopNotifier) NotifyNewApplicant(_ context.Context, vacancyName string, form *domain.ApplicantsFormInput) error {
+func (n *NoopNotifier) NotifyNewApplicant(_ context.Context, vacancyName, resumeUrl string, form *domain.ApplicantsFormInput) error {
 	slog.Info("mailer: noop — new applicant", slog.String("vacancy", vacancyName), slog.String("email", form.Email))
 	return nil
 }
@@ -182,7 +182,7 @@ func (m *SMTPMailer) send(ctx context.Context, msg *mail.Msg, subject, htmlBody 
 	return nil
 }
 
-func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, form *domain.ApplicantsFormInput) error {
+func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, resumeUrl string, form *domain.ApplicantsFormInput) error {
 	subject := fmt.Sprintf("Новый отклик на вакансию: %s", vacancyName)
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html>
@@ -210,7 +210,7 @@ func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, f
 </html>`,
 		vacancyName,
 		form.FullName, form.Email, form.PhoneNumber,
-		form.City, form.Exp, form.Description, form.Resume,
+		form.City, form.Exp, form.Description, resumeUrl,
 	)
 	m.enqueue(job{subject: subject, body: body, replyTo: form.Email})
 	return nil

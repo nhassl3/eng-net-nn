@@ -1,12 +1,15 @@
 package gin_http
 
 import (
+	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
@@ -81,12 +84,40 @@ func (h *Handler) respond(c *gin.Context) {
 		VacancyID string `json:"vacancy_id" validator:"required"`
 		domain.ApplicantsFormInput
 	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+	if err := json.Unmarshal([]byte(c.PostForm("json")), &input); err != nil {
+		h.logger.Error("respond: decode json field", slog.String("err", err.Error()))
+		NewErrorResponse(c, http.StatusBadRequest, "invalid json body")
 		return
 	}
 
-	if err := h.services.Vacancies.Respond(c.Request.Context(), input.VacancyID, &input.ApplicantsFormInput); err != nil {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, "file is required")
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		h.logger.Error("respond: open uploaded file", slog.String("err", err.Error()))
+		NewErrorResponse(c, http.StatusBadRequest, "cannot read uploaded file")
+		return
+	}
+	defer file.Close()
+
+	// Bound the in-memory read so an oversized upload can't exhaust memory; the
+	// service rejects anything above the limit via minio.MaxFileSize.
+	data, err := io.ReadAll(io.LimitReader(file, minio.MaxFileSize+1))
+	if err != nil {
+		h.logger.Error("respond: read uploaded file", slog.String("err", err.Error()))
+		NewErrorResponse(c, http.StatusBadRequest, "cannot read uploaded file")
+		return
+	}
+
+	dto := domain.FileUploadInput{FileData: data}
+
+	if err := h.services.Vacancies.Respond(
+		c.Request.Context(), input.VacancyID, &input.ApplicantsFormInput, &dto,
+	); err != nil {
 		h.logger.Error("respond", slog.String("err", err.Error()))
 		handleError(c, err)
 		return

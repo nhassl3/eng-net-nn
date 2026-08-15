@@ -3,10 +3,10 @@ package gin_http
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
+	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
 )
 
 func (h *Handler) signUp(c *gin.Context) {
@@ -38,7 +38,12 @@ func (h *Handler) signIn(c *gin.Context) {
 		return
 	}
 
-	user, err := h.services.Authorization.SignIn(c.Request.Context(), input.Username, input.Password)
+	if input.Username == "" && input.Email == "" && input.ID == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "username or email are required")
+		return
+	}
+
+	user, err := h.services.Authorization.SignIn(c.Request.Context(), &input)
 	if err != nil {
 		h.logger.Error("signIn: sign in", slog.String("err", err.Error()))
 		handleError(c, err)
@@ -59,9 +64,7 @@ func (h *Handler) signIn(c *gin.Context) {
 }
 
 func (h *Handler) refresh(c *gin.Context) {
-	var input struct {
-		RefreshToken string `json:"refresh_token" validator:"required"`
-	}
+	var input domain.RefreshInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		NewErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
@@ -76,15 +79,18 @@ func (h *Handler) refresh(c *gin.Context) {
 	c.JSON(http.StatusOK, tokenPair)
 }
 
-func (h *Handler) logout(c *gin.Context) {
-	header := c.GetHeader("Authorization")
-	parts := strings.SplitN(header, " ", 2)
-	if len(parts) != 2 {
-		NewErrorResponse(c, http.StatusUnauthorized, "invalid authorization header")
+func (h *Handler) me(c *gin.Context) {
+	user, err := h.services.Authorization.GetMe(c.Request.Context(), c.GetString(middleware.UserIdCtx))
+	if err != nil {
+		handleError(c, err)
 		return
 	}
 
-	if err := h.services.Authorization.Logout(c.Request.Context(), parts[1]); err != nil {
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func (h *Handler) logout(c *gin.Context) {
+	if err := h.services.Authorization.Logout(c.Request.Context(), c.GetString(middleware.TokenCtx)); err != nil {
 		handleError(c, err)
 		return
 	}

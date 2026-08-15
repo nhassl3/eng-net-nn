@@ -86,7 +86,6 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 
 	minIOClient, err := minio.NewMinIO(
 		ctx,
-		cfg.MinIO.PublicUrl,
 		cfg.MinIO.Endpoint,
 		cfg.MinIO.AccessKey,
 		cfg.MinIO.SecretKey,
@@ -124,6 +123,9 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer == nil {
+		return nil
+	}
 	httpErr := s.httpServer.Shutdown(ctx)
 	mailerErr := s.notifier.Close(ctx)
 	return errors.Join(httpErr, mailerErr)

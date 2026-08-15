@@ -34,7 +34,9 @@ type CreateUserInput struct {
 }
 
 type SignInInput struct {
-	Username string `json:"username" validator:"required"`
+	Username string `json:"username" validator:"omitempty"`
+	Email    string `json:"email" validator:"omitempty,email"`
+	ID       string `json:"id" validator:"omitempty,min=1,max=100"`
 	Password string `json:"password" validator:"required"`
 }
 
@@ -42,4 +44,8 @@ type GetMeParams struct {
 	UUID     *string `json:"uuid"`
 	Email    *string `json:"email"`
 	Username *string `json:"username"`
+}
+
+type RefreshInput struct {
+	RefreshToken string `json:"refresh_token" validator:"required"`
 }

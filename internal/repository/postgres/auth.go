@@ -29,20 +29,20 @@ func (r *AuthRepo) CreateUser(ctx context.Context, params domain.CreateUserInput
 	if err != nil {
 		return nil, fmt.Errorf("auth_repo.CreateUser: failed to create user: %w", err)
 	}
-	domainUser := mapUser(user)
-	return &domainUser, nil
+	return new(mapUser(user)), nil
 }
 
 // GetUserForLogin fetches the user and their stored password hash for login verification.
-func (r *AuthRepo) GetUserForLogin(ctx context.Context, username string) (*domain.User, string, error) {
+func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) (*domain.User, string, error) {
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
-		Username: stringToNullable(username),
+		Username: stringToNullable(in.Username),
+		Email:    stringToNullable(in.Email),
+		ID:       uuidPtr2Nullable(in.ID),
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("auth_repo.GetUserForLogin: %w", err)
 	}
-	domainUser := mapUser(user)
-	return &domainUser, user.HashedPassword, nil
+	return new(mapUser(user)), user.HashedPassword, nil
 }
 
 func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domain.User, error) {
@@ -54,8 +54,7 @@ func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domai
 	if err != nil {
 		return nil, fmt.Errorf("auth_repo.GetMe: failed to get user: %w", err)
 	}
-	domainUser := mapUser(user)
-	return &domainUser, nil
+	return new(mapUser(user)), nil
 }
 
 func mapUser(user db.User) domain.User {

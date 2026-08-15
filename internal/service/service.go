@@ -14,11 +14,12 @@ import (
 // Authorization service (create/login user, token lifecycle)
 type Authorization interface {
 	CreateUser(ctx context.Context, user *domain.CreateUserInput) (*domain.User, *domain.TokenPair, error)
-	SignIn(ctx context.Context, username, password string) (*domain.User, error)
+	SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, error)
 	GenerateToken(ctx context.Context, user *domain.User) (*domain.TokenPair, error)
 	ParseToken(ctx context.Context, token string) (*domain.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
 	Logout(ctx context.Context, token string) error
+	GetMe(ctx context.Context, token string) (*domain.User, error)
 }
 
 // Vacancies service — vacancy CRUD and applicant responses
@@ -30,7 +31,7 @@ type Vacancies interface {
 	Update(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) (*domain.Vacancy, error)
 	Delete(ctx context.Context, vacancyId string) error
 
-	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error
+	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }

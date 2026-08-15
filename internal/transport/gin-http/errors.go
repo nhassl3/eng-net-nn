@@ -32,6 +32,12 @@ func handleError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrRespondVacancyNotExists):
 		NewErrorResponse(c, http.StatusNotFound, err.Error())
 
+	case errors.Is(err, domain.ErrFileTooLarge):
+		NewErrorResponse(c, http.StatusRequestEntityTooLarge, err.Error())
+
+	case errors.Is(err, domain.ErrInvalidContentType):
+		NewErrorResponse(c, http.StatusUnsupportedMediaType, err.Error())
+
 	default:
 		NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
 	}

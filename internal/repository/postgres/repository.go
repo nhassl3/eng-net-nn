@@ -9,7 +9,7 @@ import (
 
 type Authorization interface {
 	CreateUser(ctx context.Context, user domain.CreateUserInput) (*domain.User, error)
-	GetUserForLogin(ctx context.Context, username string) (*domain.User, string, error)
+	GetUserForLogin(ctx context.Context, in *domain.SignInInput) (*domain.User, string, error)
 	GetMe(ctx context.Context, params domain.GetMeParams) (*domain.User, error)
 }
 
@@ -26,7 +26,7 @@ type Vacancies interface {
 	UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error
 	DeleteVacancy(ctx context.Context, vacancyId string) error
 
-	RespondToVacancy(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) (string, error)
+	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }

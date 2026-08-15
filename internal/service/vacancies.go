@@ -1,9 +1,12 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,14 +16,23 @@ import (
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
 
+const (
+	// resumeEmailTTL is how long the resume link embedded in the owner
+	// notification email stays valid.
+	resumeEmailTTL = 7 * 24 * time.Hour
+	// resumeViewTTL is how long a resume link returned to an admin via the API
+	// stays valid.
+	resumeViewTTL = 15 * time.Minute
+)
+
 type VacanciesService struct {
 	repo        postgres.Vacancies
 	mailer      mailer.Notifier
 	minioClient minio.ByteStorage
 }
 
-func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, miniClient minio.ByteStorage) *VacanciesService {
-	return &VacanciesService{repo: repo, mailer: mailer, minioClient: miniClient}
+func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, minioClient minio.ByteStorage) *VacanciesService {
+	return &VacanciesService{repo: repo, mailer: mailer, minioClient: minioClient}
 }
 
 func (s *VacanciesService) List(ctx context.Context) (*domain.Vacancies, error) {
@@ -73,7 +85,14 @@ func (s *VacanciesService) Delete(ctx context.Context, vacancyId string) error {
 
 // Respond saves the applicant's form to the DB and asynchronously notifies the
 // owner by email. SMTP errors are logged but do not fail the request.
-func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput) error {
+func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error {
+	// Detect the real content type from the bytes (the client header is not
+	// trusted) and validate size/type.
+	contentType, err := minio.ResolveContentType(fileInput.FileData)
+	if err != nil {
+		return fmt.Errorf("vacancies_service.Respond.minio: failed to validate uploaded file: %w", err)
+	}
+
 	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -82,16 +101,52 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 		return fmt.Errorf("vacancies_service.Respond: failed to get vacancy %w", err)
 	}
 
-	go func() {
-		_ = s.mailer.NotifyNewApplicant(ctx, vacancy.Name, applicantsForm)
-		_ = s.mailer.NotifyUserAboutVacancy(ctx, vacancy.Name, applicantsForm.Email)
-	}()
+	objectName := minio.GenerateObjectName("resumes/users", applicantsForm.Email, contentType)
 
-	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, applicantsForm); err != nil {
+	if _, err := s.minioClient.Upload(
+		ctx, objectName, contentType, bytes.NewReader(fileInput.FileData), int64(len(fileInput.FileData)),
+	); err != nil {
+		return fmt.Errorf("vacancies_service.Respond.minio: failed to upload file: %w", err)
+	}
+
+	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, objectName, applicantsForm); err != nil {
+		// Don't leave an orphaned object behind if persisting the response failed.
+		if delErr := s.minioClient.Delete(ctx, objectName); delErr != nil {
+			slog.Error("vacancies_service.Respond: cleanup orphaned object",
+				slog.String("object", objectName), slog.String("err", delErr.Error()))
+		}
 		return fmt.Errorf("vacancies_service.Respond: %w", err)
 	}
 
+	// A failed notification link must not fail the whole request.
+	resumeURL, err := s.minioClient.PresignedURL(ctx, objectName, resumeEmailTTL)
+	if err != nil {
+		slog.Error("vacancies_service.Respond: presign resume for email",
+			slog.String("object", objectName), slog.String("err", err.Error()))
+	}
+
+	go func() {
+		_ = s.mailer.NotifyNewApplicant(ctx, vacancy.Name, resumeURL, applicantsForm)
+		_ = s.mailer.NotifyUserAboutVacancy(ctx, vacancy.Name, applicantsForm.Email)
+	}()
+
 	return nil
+}
+
+// presignResume replaces the stored object key on rv with a temporary signed
+// URL. On failure the link is cleared rather than failing the whole listing.
+func (s *VacanciesService) presignResume(ctx context.Context, rv *domain.RespondVacancy) {
+	if rv.ResumeUrl == "" {
+		return
+	}
+	url, err := s.minioClient.PresignedURL(ctx, rv.ResumeUrl, resumeViewTTL)
+	if err != nil {
+		slog.Error("vacancies_service: presign resume",
+			slog.String("object", rv.ResumeUrl), slog.String("err", err.Error()))
+		rv.ResumeUrl = ""
+		return
+	}
+	rv.ResumeUrl = url
 }
 
 func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
@@ -101,6 +156,9 @@ func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.Res
 			return nil, domain.ErrRespondVacanciesNotExists
 		}
 		return nil, fmt.Errorf("vacancies_service.GetRespondVacancies: %w", err)
+	}
+	for i := range respondVacancies.RespondVacancies {
+		s.presignResume(ctx, &respondVacancies.RespondVacancies[i])
 	}
 	return respondVacancies, nil
 }
@@ -113,5 +171,6 @@ func (s *VacanciesService) GetRespondVacancy(ctx context.Context, respondVacancy
 		}
 		return nil, fmt.Errorf("vacancies_service.GetRespondVacancy: %w", err)
 	}
+	s.presignResume(ctx, respondVacancy)
 	return respondVacancy, nil
 }
