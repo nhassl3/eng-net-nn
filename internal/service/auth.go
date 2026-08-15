@@ -71,13 +71,13 @@ func (s *AuthService) CreateUser(ctx context.Context, input *domain.CreateUserIn
 	return user, tokenPair, nil
 }
 
-func (s *AuthService) SignIn(ctx context.Context, username, password string) (*domain.User, error) {
-	user, storedHash, err := s.repo.GetUserForLogin(ctx, username)
+func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, error) {
+	user, storedHash, err := s.repo.GetUserForLogin(ctx, req)
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
 
-	ok, err := hash.VerifyPassword(password, storedHash)
+	ok, err := hash.VerifyPassword(req.Password, storedHash)
 	if err != nil || !ok {
 		return nil, domain.ErrInvalidCredentials
 	}
@@ -148,6 +148,22 @@ func (s *AuthService) Logout(ctx context.Context, token string) error {
 	}
 
 	return nil
+}
+
+func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, error) {
+	user, err := s.redisRepo.Profile(ctx, domain.GetMeParams{
+		UUID: &uuid,
+	})
+	if err != nil {
+		user, err = s.repo.GetMe(ctx, domain.GetMeParams{UUID: &uuid})
+		if err != nil {
+			return nil, fmt.Errorf("auth_service.GetMe: %w", err)
+		}
+		if errors.Is(err, domain.ErrRedisNotFound) {
+			_ = s.redisRepo.SetProfile(ctx, user)
+		}
+	}
+	return user, nil
 }
 
 func isDuplicateError(err error) bool {
