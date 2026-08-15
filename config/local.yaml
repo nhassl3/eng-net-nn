@@ -2,6 +2,7 @@ env: "local"
 allow_origins:
   - http://localhost:3000
   - http://localhost:5173
+  - http://localhost:4173
 http_server:
   address: "localhost:8080"
   timeout: 4s
@@ -13,7 +14,7 @@ db:
   dbname: "unet"
   sslmode: "disable"
 redis:
-  username: "ipbuild-unet"
+  username: "admin"
   address: "localhost:6380"
   db: 0
   ttl:
