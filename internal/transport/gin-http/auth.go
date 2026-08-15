@@ -59,9 +59,7 @@ func (h *Handler) signIn(c *gin.Context) {
 }
 
 func (h *Handler) refresh(c *gin.Context) {
-	var input struct {
-		RefreshToken string `json:"refresh_token" validator:"required"`
-	}
+	var input domain.RefreshInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		NewErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
