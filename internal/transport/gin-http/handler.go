@@ -69,6 +69,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	api := router.Group("/api")
 	{
 		api.POST("/logout", h.middleware.UserIdentity, h.logout)
+		api.GET("/me", h.middleware.UserIdentity, h.me)
 
 		vacancies := api.Group("/vacancies")
 		{
