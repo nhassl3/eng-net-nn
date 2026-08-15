@@ -34,7 +34,9 @@ type CreateUserInput struct {
 }
 
 type SignInInput struct {
-	Username string `json:"username" validator:"required"`
+	Username string `json:"username" validator:"omitempty"`
+	Email    string `json:"email" validator:"omitempty,email"`
+	ID       string `json:"id" validator:"omitempty,min=1,max=100"`
 	Password string `json:"password" validator:"required"`
 }
 
