@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -11,9 +10,9 @@ import (
 
 const (
 	authorizationHeader = "Authorization"
-	userCtx             = "userId"
+	UserIdCtx           = "userId"
 	roleCtx             = "userRole"
-	tokenCtx            = "token"
+	TokenCtx            = "token"
 )
 
 type AuthInterceptor struct {
@@ -48,9 +47,9 @@ func (i *AuthInterceptor) UserIdentity(c *gin.Context) {
 		return
 	}
 
-	c.Set(userCtx, user.UUID)
+	c.Set(UserIdCtx, user.UUID)
 	c.Set(roleCtx, user.Role)
-	c.Set(tokenCtx, tokenStr)
+	c.Set(TokenCtx, tokenStr)
 	c.Next()
 }
 
@@ -99,20 +98,4 @@ type errorResponse struct {
 
 func newErrorResponse(c *gin.Context, statusCode int, message string) {
 	c.AbortWithStatusJSON(statusCode, errorResponse{message})
-}
-
-func GetUserId(c *gin.Context) (string, error) {
-	id, ok := c.Get(userCtx)
-	if !ok {
-		newErrorResponse(c, http.StatusUnauthorized, "user not found in context")
-		return "", errors.New("user not found in context")
-	}
-
-	idStr, ok := id.(string)
-	if !ok || idStr == "" {
-		newErrorResponse(c, http.StatusUnauthorized, "user id has invalid type")
-		return "", errors.New("user id has invalid type")
-	}
-
-	return idStr, nil
 }
