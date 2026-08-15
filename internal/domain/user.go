@@ -43,3 +43,7 @@ type GetMeParams struct {
 	Email    *string `json:"email"`
 	Username *string `json:"username"`
 }
+
+type RefreshInput struct {
+	RefreshToken string `json:"refresh_token" validator:"required"`
+}
