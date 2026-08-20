@@ -1,1 +1,1 @@
-drop table if exists cases_stats;
+drop table if exists case_stats;
