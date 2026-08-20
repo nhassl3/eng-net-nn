@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	// resumeEmailTTL is how long the resume link embedded in the owner
+	// resumeEmailTTL is how long the résumé link embedded in the owner
 	// notification email stays valid.
 	resumeEmailTTL = 7 * 24 * time.Hour
-	// resumeViewTTL is how long a resume link returned to an admin via the API
+	// resumeViewTTL is how long a résumé link returned to an admin via the API
 	// stays valid.
 	resumeViewTTL = 15 * time.Minute
 )
@@ -54,8 +54,7 @@ func (s *VacanciesService) GetVacancy(ctx context.Context, vacancyId string) (*d
 func (s *VacanciesService) Create(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
 	vacancy, err := s.repo.CreateVacancy(ctx, params)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == "23505" {
 				return nil, domain.ErrVacancyAlreadyExists
 			}

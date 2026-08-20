@@ -39,8 +39,7 @@ func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*doma
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy: %w", err)
 	}
-	domainVacancy := mapVacancy(vacancy)
-	return &domainVacancy, nil
+	return new(mapVacancy(vacancy)), nil
 }
 
 func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
@@ -59,8 +58,7 @@ func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.Create
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.Create: failed to create vacancy: %w", err)
 	}
-	domainVacancy := mapVacancy(vacancy)
-	return &domainVacancy, nil
+	return new(mapVacancy(vacancy)), nil
 }
 
 func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error {
@@ -134,8 +132,7 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 		VacancyID:   string2UUID(vacancyId),
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == "23505" {
 				return "", domain.ErrRespondAlreadyExists
 			}
@@ -161,8 +158,7 @@ func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId 
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
 	}
-	domainRespondVacancy := mapRespondVacancy(respondVacancy)
-	return &domainRespondVacancy, nil
+	return new(mapRespondVacancy(respondVacancy)), nil
 }
 
 func mapVacancies(vacancies []db.Vacancy) *domain.Vacancies {
