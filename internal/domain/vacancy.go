@@ -8,7 +8,7 @@ type Vacancy struct {
 	UUID        string    `json:"uuid"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	RequiredExp float64   `json:"required_exp"`
+	RequiredExp string    `json:"required_exp"`
 	Skills      []string  `json:"skills"`
 	PayDay      float64   `json:"pay_day"`
 	CreatedAt   time.Time `json:"created_at"`
