@@ -96,6 +96,16 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 				vacanciesAdmin.GET("/:id", h.getRespondVacancy)
 			}
 
+			jobDirectionsAdmin := admin.Group("/job_directions")
+			{
+				jobDirectionsAdmin.GET("/", h.listJd)
+				jobDirectionsAdmin.GET("/:id", h.getJd)
+
+				jobDirectionsAdmin.POST("/", h.createJd)
+				jobDirectionsAdmin.PUT("/", h.updateJd)
+				jobDirectionsAdmin.DELETE("/", h.deleteJd)
+			}
+
 			planAdmin := admin.Group("/plans")
 			{
 				planAdmin.GET("/", h.getAllPlans)

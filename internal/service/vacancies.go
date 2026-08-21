@@ -35,7 +35,7 @@ func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, minioC
 	return &VacanciesService{repo: repo, mailer: mailer, minioClient: minioClient}
 }
 
-func (s *VacanciesService) List(ctx context.Context) (*domain.Vacancies, error) {
+func (s *VacanciesService) List(ctx context.Context) (*domain.VacanciesWithJd, error) {
 	vacancies, err := s.repo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.List: %w", err)
@@ -43,7 +43,7 @@ func (s *VacanciesService) List(ctx context.Context) (*domain.Vacancies, error) 
 	return vacancies, nil
 }
 
-func (s *VacanciesService) GetVacancy(ctx context.Context, vacancyId string) (*domain.Vacancy, error) {
+func (s *VacanciesService) GetVacancy(ctx context.Context, vacancyId string) (*domain.VacancyWithJd, error) {
 	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.GetVacancy: %w", err)
@@ -72,12 +72,51 @@ func (s *VacanciesService) Update(ctx context.Context, vacancyId string, updVaca
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.Update: fetch after update: %w", err)
 	}
-	return vacancy, nil
+	return &vacancy.Vacancy, nil
 }
 
 func (s *VacanciesService) Delete(ctx context.Context, vacancyId string) error {
 	if err := s.repo.DeleteVacancy(ctx, vacancyId); err != nil {
 		return fmt.Errorf("vacancies_service.Delete: %w", err)
+	}
+	return nil
+}
+
+func (s *VacanciesService) ListJd(ctx context.Context) (*domain.JobDirections, error) {
+	jd, err := s.repo.ListJd(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_service.ListJd: %w", err)
+	}
+	return jd, nil
+}
+
+func (s *VacanciesService) GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error) {
+	jd, err := s.repo.GetJd(ctx, jdId)
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_service.GetJd: %w", err)
+	}
+	return jd, nil
+}
+
+func (s *VacanciesService) CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error) {
+	jd, err := s.repo.CreateJd(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_service.CreateJd: %w", err)
+	}
+	return jd, nil
+}
+
+func (s *VacanciesService) UpdateJd(ctx context.Context, jdId int32, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
+	jd, err := s.repo.UpdateJd(ctx, jdId, updJd)
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_service.UpdateJd: %w", err)
+	}
+	return jd, nil
+}
+
+func (s *VacanciesService) DeleteJd(ctx context.Context, jdId int32) error {
+	if err := s.repo.RemoveJd(ctx, jdId); err != nil {
+		return fmt.Errorf("vacancies_service.DeleteJd: %w", err)
 	}
 	return nil
 }

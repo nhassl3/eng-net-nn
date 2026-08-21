@@ -15,6 +15,40 @@ type Vacancy struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type JobDirection struct {
+	JdName        string   `json:"jd_name"`
+	JdDescription string   `json:"jd_description"`
+	JdTags        []string `json:"jd_tags"`
+}
+
+type JobDirections struct {
+	JobDirections []JobDirection `json:"job_directions"`
+	Total         int            `json:"total"`
+}
+
+type VacancyWithJd struct {
+	Vacancy      `json:",inline"`
+	JobDirection `json:",inline"`
+}
+
+// VacanciesWithJd - main struct
+type VacanciesWithJd struct {
+	VacanciesWithJd []VacancyWithJd `json:"vacancies"`
+	Total           int             `json:"total"`
+}
+
+type CreateJobDirectionInput struct {
+	Name        string   `json:"name"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
+}
+
+type UpdateJobDirectionInput struct {
+	Name        *string  `json:"name,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Description *string  `json:"description,omitempty"`
+}
+
 type RespondVacancies struct {
 	RespondVacancies []RespondVacancy `json:"respond_vacancies"`
 	Total            int              `json:"total"`

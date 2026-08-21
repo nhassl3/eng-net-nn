@@ -78,6 +78,82 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *Handler) listJd(c *gin.Context) {
+	JDs, err := h.services.Vacancies.ListJd(c.Request.Context())
+	if err != nil {
+		h.logger.Error("listJd", slog.String("err", err.Error()))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, JDs)
+}
+
+func (h *Handler) getJd(c *gin.Context) {
+	idInt, ok := h.paramInt32(c, "id", "getJd")
+	if !ok {
+		return
+	}
+
+	jd, err := h.services.Vacancies.GetJd(c.Request.Context(), idInt)
+	if err != nil {
+		h.logger.Error("getJd", slog.String("err", err.Error()))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, jd)
+}
+
+func (h *Handler) createJd(c *gin.Context) {
+	var input domain.CreateJobDirectionInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	jd, err := h.services.Vacancies.CreateJd(c.Request.Context(), &input)
+	if err != nil {
+		h.logger.Error("createJd", slog.String("err", err.Error()))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, jd)
+}
+
+func (h *Handler) updateJd(c *gin.Context) {
+	idInt, ok := h.paramInt32(c, "id", "updateJd")
+	if !ok {
+		return
+	}
+
+	var input domain.UpdateJobDirectionInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	vacancy, err := h.services.Vacancies.UpdateJd(c.Request.Context(), idInt, &input)
+	if err != nil {
+		h.logger.Error("updateJd", slog.String("err", err.Error()))
+		handleError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, vacancy)
+}
+
+func (h *Handler) deleteJd(c *gin.Context) {
+	idInt, ok := h.paramInt32(c, "id", "deleteJd")
+	if !ok {
+		return
+	}
+
+	if err := h.services.Vacancies.DeleteJd(c.Request.Context(), idInt); err != nil {
+		h.logger.Error("deleteJd", slog.String("err", err.Error()))
+		handleError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // respond a handler which creates email for owner with next
 func (h *Handler) respond(c *gin.Context) {
 	var input struct {

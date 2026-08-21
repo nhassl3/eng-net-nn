@@ -19,12 +19,19 @@ type Admin interface {
 }
 
 type Vacancies interface {
-	List(ctx context.Context) (*domain.Vacancies, error)
-	GetVacancy(ctx context.Context, vacancyId string) (*domain.Vacancy, error)
+	List(ctx context.Context) (*domain.VacanciesWithJd, error)
+	GetVacancy(ctx context.Context, vacancyId string) (*domain.VacancyWithJd, error)
 
 	CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error)
 	UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error
 	DeleteVacancy(ctx context.Context, vacancyId string) error
+
+	ListJd(ctx context.Context) (*domain.JobDirections, error)
+	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
+
+	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
+	UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
+	RemoveJd(ctx context.Context, jdId int32) error
 
 	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
