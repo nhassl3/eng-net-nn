@@ -1,1 +1,1 @@
-alter table if exists users add column if not exists role varchar(50) CHECK (role in ('admin', 'user', 'partner')); -- additive list
+alter table if exists users add column if not exists role varchar(50) default 'user' CHECK (role in ('admin', 'user', 'partner')); -- additive list

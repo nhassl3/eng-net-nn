@@ -1,1 +1,1 @@
-ALTER TABLE "plans" DROP CONSTRAINT "plan_direction_fkey";
+ALTER TABLE "plans" DROP CONSTRAINT "plans_direction_fkey";
