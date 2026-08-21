@@ -51,7 +51,7 @@ func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.Create
 		Jd:          params.Jd,
 		Name:        stringToNullable(params.Name),
 		Description: stringToNullable(params.Description),
-		RequiredExp: nFloat2Nullable(params.RequiredExp),
+		RequiredExp: stringPtrToNullable(params.RequiredExp),
 		PayDay:      payDay,
 		Skills:      params.Skills,
 	})
@@ -93,13 +93,13 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 			updateVacancyParams.Skills = updVacancy.Skills
 		}
 		if updVacancy.Name != nil && *updVacancy.Name != "" {
-			updateVacancyParams.Name = usernamePtrToNullable(updVacancy.Name)
+			updateVacancyParams.Name = stringPtrToNullable(updVacancy.Name)
 		}
 		if updVacancy.Description != nil && *updVacancy.Description != "" {
-			updateVacancyParams.Description = usernamePtrToNullable(updVacancy.Description)
+			updateVacancyParams.Description = stringPtrToNullable(updVacancy.Description)
 		}
-		if updVacancy.RequiredExp != nil && *updVacancy.RequiredExp != 0 {
-			updateVacancyParams.RequiredExp = nFloat2Nullable(updVacancy.RequiredExp)
+		if updVacancy.RequiredExp != nil && *updVacancy.RequiredExp != "" {
+			updateVacancyParams.RequiredExp = stringPtrToNullable(updVacancy.RequiredExp)
 		}
 		if updVacancy.PayDay != nil && *updVacancy.PayDay > 0 {
 			updateVacancyParams.PayDay = *updVacancy.PayDay
@@ -177,7 +177,7 @@ func mapVacancy(v db.Vacancy) domain.Vacancy {
 		UUID:        uuid2String(v.ID),
 		Name:        v.Name.String,
 		Description: v.Description.String,
-		RequiredExp: v.RequiredExp.Float64,
+		RequiredExp: v.RequiredExp.String,
 		PayDay:      v.PayDay,
 		Skills:      v.Skills,
 		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
