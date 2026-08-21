@@ -102,7 +102,9 @@ func (h *Handler) respond(c *gin.Context) {
 		NewErrorResponse(c, http.StatusBadRequest, "cannot read uploaded file")
 		return
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Bound the in-memory read so an oversized upload can't exhaust memory; the
 	// service rejects anything above the limit via minio.MaxFileSize.
