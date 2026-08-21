@@ -17,12 +17,12 @@ INSERT INTO vacancies (jd, name, description, required_exp, pay_day, skills) VAL
 `
 
 type CreateVacancyParams struct {
-	Jd          int32         `json:"jd"`
-	Name        pgtype.Text   `json:"name"`
-	Description pgtype.Text   `json:"description"`
-	RequiredExp pgtype.Float8 `json:"required_exp"`
-	PayDay      float64       `json:"pay_day"`
-	Skills      []string      `json:"skills"`
+	Jd          int32       `json:"jd"`
+	Name        pgtype.Text `json:"name"`
+	Description pgtype.Text `json:"description"`
+	RequiredExp pgtype.Text `json:"required_exp"`
+	PayDay      float64     `json:"pay_day"`
+	Skills      []string    `json:"skills"`
 }
 
 func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (Vacancy, error) {
@@ -239,12 +239,12 @@ UPDATE vacancies SET jd=$1, name=$2, description=$3, required_exp=$4, pay_day=$5
 `
 
 type UpdateVacancyParams struct {
-	Jd          int32         `json:"jd"`
-	Name        pgtype.Text   `json:"name"`
-	Description pgtype.Text   `json:"description"`
-	RequiredExp pgtype.Float8 `json:"required_exp"`
-	PayDay      float64       `json:"pay_day"`
-	Skills      []string      `json:"skills"`
+	Jd          int32       `json:"jd"`
+	Name        pgtype.Text `json:"name"`
+	Description pgtype.Text `json:"description"`
+	RequiredExp pgtype.Text `json:"required_exp"`
+	PayDay      float64     `json:"pay_day"`
+	Skills      []string    `json:"skills"`
 }
 
 func (q *Queries) UpdateVacancy(ctx context.Context, arg UpdateVacancyParams) (Vacancy, error) {

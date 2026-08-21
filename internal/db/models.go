@@ -36,11 +36,10 @@ type Direction struct {
 }
 
 type JobDirection struct {
-	ID              int32    `json:"id"`
-	Name            string   `json:"name"`
-	Tags            []string `json:"tags"`
-	Description     string   `json:"description"`
-	DescriptionTags []string `json:"description_tags"`
+	ID          int32    `json:"id"`
+	Name        string   `json:"name"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
 }
 
 type LinkUserWithPlan struct {
@@ -65,6 +64,7 @@ type User struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	HashedPassword string             `json:"hashed_password"`
+	Role           pgtype.Text        `json:"role"`
 }
 
 type UserRespond struct {
@@ -85,7 +85,7 @@ type Vacancy struct {
 	Jd          int32              `json:"jd"`
 	Name        pgtype.Text        `json:"name"`
 	Description pgtype.Text        `json:"description"`
-	RequiredExp pgtype.Float8      `json:"required_exp"`
+	RequiredExp pgtype.Text        `json:"required_exp"`
 	PayDay      float64            `json:"pay_day"`
 	Skills      []string           `json:"skills"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
