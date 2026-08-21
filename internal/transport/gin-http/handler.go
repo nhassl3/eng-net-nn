@@ -78,7 +78,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 			vacancies.POST("/respond", h.respond)
 		}
 
-		plan := api.Group("/plan")
+		plan := api.Group("/plans")
 		{
 			plan.POST("/", h.requestPlan)
 			plan.GET("/:id", h.middleware.UserIdentity, h.getResponseFromRequest)
@@ -100,6 +100,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 			{
 				planAdmin.GET("/", h.getAllPlans)
 				planAdmin.GET("/:id", h.getPlan)
+				// TODO: POST response to plan
 			}
 		}
 	}
