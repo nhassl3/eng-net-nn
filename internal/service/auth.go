@@ -92,7 +92,7 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 	return user, nil
 }
 
-func (s *AuthService) GenerateToken(ctx context.Context, user *domain.User) (*domain.TokenPair, error) {
+func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*domain.TokenPair, error) {
 	accessToken, err := s.accessMaker.CreateToken(user.Username, user.UUID, user.Role)
 	if err != nil {
 		return nil, fmt.Errorf("auth_service.GenerateToken: access: %w", err)
@@ -109,7 +109,7 @@ func (s *AuthService) GenerateToken(ctx context.Context, user *domain.User) (*do
 	}, nil
 }
 
-func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
+func (s *AuthService) ParseToken(_ context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
 		return nil, err
