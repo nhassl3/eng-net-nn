@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS "plan" (
+CREATE TABLE IF NOT EXISTS "plans" (
                         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                         "full_name" varchar,
                         "direction" int NOT NULL,
