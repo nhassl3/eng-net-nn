@@ -13,23 +13,28 @@ import (
 
 type Querier interface {
 	AddAdmin(ctx context.Context, dollar_1 uuid.UUID) error
+	CreateJobDirection(ctx context.Context, arg CreateJobDirectionParams) (JobDirection, error)
 	CreateLinkRequest(ctx context.Context, arg CreateLinkRequestParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVacancy(ctx context.Context, arg CreateVacancyParams) (Vacancy, error)
 	GetAllPlans(ctx context.Context, arg GetAllPlansParams) ([]Plan, error)
 	GetDirection(ctx context.Context, id int32) (pgtype.Text, error)
+	GetJD(ctx context.Context, id int64) (JobDirection, error)
+	GetJDs(ctx context.Context, arg GetJDsParams) ([]JobDirection, error)
 	GetPlan(ctx context.Context, id uuid.UUID) (Plan, error)
 	GetRespondVacancies(ctx context.Context, arg GetRespondVacanciesParams) ([]UserRespond, error)
 	GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserRespond, error)
 	GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error)
 	GetUser(ctx context.Context, arg GetUserParams) (User, error)
-	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]Vacancy, error)
-	GetVacancy(ctx context.Context, arg GetVacancyParams) (Vacancy, error)
+	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error)
+	GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error)
 	IsAdmin(ctx context.Context, dollar_1 uuid.UUID) (bool, error)
 	RemoveAdmin(ctx context.Context, dollar_1 uuid.UUID) error
+	RemoveJobDirection(ctx context.Context, id int64) error
 	RemoveVacancy(ctx context.Context, arg RemoveVacancyParams) error
 	RequestPlan(ctx context.Context, arg RequestPlanParams) (Plan, error)
 	RespondToVacancy(ctx context.Context, arg RespondToVacancyParams) (uuid.UUID, error)
+	UpdateJobDirection(ctx context.Context, arg UpdateJobDirectionParams) (JobDirection, error)
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (User, error)
 	UpdateVacancy(ctx context.Context, arg UpdateVacancyParams) (Vacancy, error)
 	UserExists(ctx context.Context, arg UserExistsParams) (bool, error)

@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS "job_direction";
+DROP TABLE IF EXISTS "job_directions";

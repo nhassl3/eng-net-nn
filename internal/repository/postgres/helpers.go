@@ -45,8 +45,8 @@ func nUUIDPtr2Nullable(s *string) pgtype.UUID {
 	return uuidPtr2Nullable(*s)
 }
 
-// usernamePtrToNullable safely converts string pointer to pgtype.Text.
-func usernamePtrToNullable(s *string) pgtype.Text {
+// stringPtrToNullable safely converts string pointer to pgtype.Text.
+func stringPtrToNullable(s *string) pgtype.Text {
 	if s == nil {
 		return pgtype.Text{}
 	}

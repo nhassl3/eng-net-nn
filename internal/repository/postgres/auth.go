@@ -48,8 +48,8 @@ func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) 
 func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domain.User, error) {
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		ID:       nUUIDPtr2Nullable(params.UUID),
-		Email:    usernamePtrToNullable(params.Email),
-		Username: usernamePtrToNullable(params.Username),
+		Email:    stringPtrToNullable(params.Email),
+		Username: stringPtrToNullable(params.Username),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("auth_repo.GetMe: failed to get user: %w", err)

@@ -14,6 +14,21 @@ type Admin struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Case struct {
+	ID          int64       `json:"id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Label       pgtype.Text `json:"label"`
+	Photo       pgtype.Text `json:"photo"`
+}
+
+type CaseStat struct {
+	ID     int64  `json:"id"`
+	CaseID int64  `json:"case_id"`
+	Value  string `json:"value"`
+	Label  string `json:"label"`
+}
+
 type Direction struct {
 	ID          int32       `json:"id"`
 	Name        pgtype.Text `json:"name"`
@@ -21,11 +36,10 @@ type Direction struct {
 }
 
 type JobDirection struct {
-	ID              int32    `json:"id"`
-	Name            string   `json:"name"`
-	Tags            []string `json:"tags"`
-	Description     string   `json:"description"`
-	DescriptionTags []string `json:"description_tags"`
+	ID          int32    `json:"id"`
+	Name        string   `json:"name"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
 }
 
 type LinkUserWithPlan struct {
@@ -50,6 +64,7 @@ type User struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	HashedPassword string             `json:"hashed_password"`
+	Role           pgtype.Text        `json:"role"`
 }
 
 type UserRespond struct {
@@ -70,7 +85,7 @@ type Vacancy struct {
 	Jd          int32              `json:"jd"`
 	Name        pgtype.Text        `json:"name"`
 	Description pgtype.Text        `json:"description"`
-	RequiredExp pgtype.Float8      `json:"required_exp"`
+	RequiredExp pgtype.Text        `json:"required_exp"`
 	PayDay      float64            `json:"pay_day"`
 	Skills      []string           `json:"skills"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`

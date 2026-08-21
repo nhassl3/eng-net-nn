@@ -24,12 +24,19 @@ type Authorization interface {
 
 // Vacancies service — vacancy CRUD and applicant responses
 type Vacancies interface {
-	List(ctx context.Context) (*domain.Vacancies, error)
-	GetVacancy(ctx context.Context, vacancyId string) (*domain.Vacancy, error)
+	List(ctx context.Context) (*domain.VacanciesWithJd, error)
+	GetVacancy(ctx context.Context, vacancyId string) (*domain.VacancyWithJd, error)
 
 	Create(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error)
 	Update(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) (*domain.Vacancy, error)
 	Delete(ctx context.Context, vacancyId string) error
+
+	ListJd(ctx context.Context) (*domain.JobDirections, error)
+	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
+
+	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
+	UpdateJd(ctx context.Context, jdId int32, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
+	DeleteJd(ctx context.Context, jdId int32) error
 
 	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
@@ -61,6 +68,6 @@ func NewService(
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
 		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient),
-		Plan:          NewPlanService(repos.Plan, mailer),
+		Plan:          NewPlansService(repos.Plan, mailer),
 	}
 }

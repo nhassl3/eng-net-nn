@@ -30,8 +30,7 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.CreatePlan: %w", err)
 	}
-	domainPlan := mapPlan(plan)
-	return &domainPlan, nil
+	return new(mapPlan(plan)), nil
 }
 
 func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
@@ -52,12 +51,9 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
-	domainUser := mapUser(user)
-	domainPlan := mapPlan(plan)
-
 	return &domain.UserPlan{
-		User: &domainUser,
-		Plan: &domainPlan,
+		User: new(mapUser(user)),
+		Plan: new(mapPlan(plan)),
 	}, nil
 }
 

@@ -8,11 +8,45 @@ type Vacancy struct {
 	UUID        string    `json:"uuid"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	RequiredExp float64   `json:"required_exp"`
+	RequiredExp string    `json:"required_exp"`
 	Skills      []string  `json:"skills"`
 	PayDay      float64   `json:"pay_day"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type JobDirection struct {
+	JdName        string   `json:"jd_name"`
+	JdDescription string   `json:"jd_description"`
+	JdTags        []string `json:"jd_tags"`
+}
+
+type JobDirections struct {
+	JobDirections []JobDirection `json:"job_directions"`
+	Total         int            `json:"total"`
+}
+
+type VacancyWithJd struct {
+	Vacancy      `json:",inline"`
+	JobDirection `json:",inline"`
+}
+
+// VacanciesWithJd - main struct
+type VacanciesWithJd struct {
+	VacanciesWithJd []VacancyWithJd `json:"vacancies"`
+	Total           int             `json:"total"`
+}
+
+type CreateJobDirectionInput struct {
+	Name        string   `json:"name"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
+}
+
+type UpdateJobDirectionInput struct {
+	Name        *string  `json:"name,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Description *string  `json:"description,omitempty"`
 }
 
 type RespondVacancies struct {
@@ -52,19 +86,19 @@ type FileUploadInput struct {
 }
 
 type UpdatedVacancyInput struct {
-	Jd          *int32
-	Name        *string
-	Description *string
-	RequiredExp *float64
-	PayDay      *float64
-	Skills      []string
+	Jd          *int32   `json:"jd,omitempty"`
+	Name        *string  `json:"name,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	RequiredExp *string  `json:"required_exp,omitempty"`
+	PayDay      *float64 `json:"pay_day,omitempty"`
+	Skills      []string `json:"skills,omitempty"`
 }
 
 type CreateVacancyInput struct {
 	Jd          int32    `json:"jd,omitempty"`
 	Name        string   `json:"name,omitempty"`
 	Description string   `json:"description,omitempty"`
-	RequiredExp *float64 `json:"required_exp,omitempty"`
+	RequiredExp *string  `json:"required_exp,omitempty"`
 	PayDay      *float64 `json:"pay_day,omitempty"`
 	Skills      []string `json:"skills,omitempty"`
 }

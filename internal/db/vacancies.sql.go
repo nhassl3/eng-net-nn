@@ -12,17 +12,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createJobDirection = `-- name: CreateJobDirection :one
+INSERT INTO job_directions (name, tags, description) VALUES ($1::varchar, $2::text[], $3::text) RETURNING id, name, tags, description
+`
+
+type CreateJobDirectionParams struct {
+	Name        string   `json:"name"`
+	Tags        []string `json:"tags"`
+	Description string   `json:"description"`
+}
+
+func (q *Queries) CreateJobDirection(ctx context.Context, arg CreateJobDirectionParams) (JobDirection, error) {
+	row := q.db.QueryRow(ctx, createJobDirection, arg.Name, arg.Tags, arg.Description)
+	var i JobDirection
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Tags,
+		&i.Description,
+	)
+	return i, err
+}
+
 const createVacancy = `-- name: CreateVacancy :one
 INSERT INTO vacancies (jd, name, description, required_exp, pay_day, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
 `
 
 type CreateVacancyParams struct {
-	Jd          int32         `json:"jd"`
-	Name        pgtype.Text   `json:"name"`
-	Description pgtype.Text   `json:"description"`
-	RequiredExp pgtype.Float8 `json:"required_exp"`
-	PayDay      float64       `json:"pay_day"`
-	Skills      []string      `json:"skills"`
+	Jd          int32       `json:"jd"`
+	Name        pgtype.Text `json:"name"`
+	Description pgtype.Text `json:"description"`
+	RequiredExp pgtype.Text `json:"required_exp"`
+	PayDay      float64     `json:"pay_day"`
+	Skills      []string    `json:"skills"`
 }
 
 func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (Vacancy, error) {
@@ -47,6 +69,56 @@ func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (V
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getJD = `-- name: GetJD :one
+SELECT id, name, tags, description FROM job_directions WHERE id=$1::bigserial LIMIT 1
+`
+
+func (q *Queries) GetJD(ctx context.Context, id int64) (JobDirection, error) {
+	row := q.db.QueryRow(ctx, getJD, id)
+	var i JobDirection
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Tags,
+		&i.Description,
+	)
+	return i, err
+}
+
+const getJDs = `-- name: GetJDs :many
+SELECT id, name, tags, description FROM job_directions LIMIT $1 OFFSET $2
+`
+
+type GetJDsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) GetJDs(ctx context.Context, arg GetJDsParams) ([]JobDirection, error) {
+	rows, err := q.db.Query(ctx, getJDs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []JobDirection{}
+	for rows.Next() {
+		var i JobDirection
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Tags,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getRespondVacancies = `-- name: GetRespondVacancies :many
@@ -112,7 +184,7 @@ func (q *Queries) GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserResp
 }
 
 const getVacancies = `-- name: GetVacancies :many
-SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at FROM vacancies LIMIT $1 OFFSET $2
+SELECT v.id, v.jd, v.name, v.description, v.required_exp, v.pay_day, v.skills, v.created_at, v.updated_at, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd on v.jd=jd.id LIMIT $1 OFFSET $2
 `
 
 type GetVacanciesParams struct {
@@ -120,15 +192,30 @@ type GetVacanciesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]Vacancy, error) {
+type VacancyWithJd struct {
+	ID            uuid.UUID          `json:"id"`
+	Jd            int32              `json:"jd"`
+	Name          pgtype.Text        `json:"name"`
+	Description   pgtype.Text        `json:"description"`
+	RequiredExp   pgtype.Text        `json:"required_exp"`
+	PayDay        float64            `json:"pay_day"`
+	Skills        []string           `json:"skills"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	JdName        string             `json:"jd_name"`
+	JdTags        []string           `json:"jd_tags"`
+	JdDescription string             `json:"jd_description"`
+}
+
+func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error) {
 	rows, err := q.db.Query(ctx, getVacancies, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Vacancy{}
+	items := []VacancyWithJd{}
 	for rows.Next() {
-		var i Vacancy
+		var i VacancyWithJd
 		if err := rows.Scan(
 			&i.ID,
 			&i.Jd,
@@ -139,6 +226,9 @@ func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]V
 			&i.Skills,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.JdName,
+			&i.JdTags,
+			&i.JdDescription,
 		); err != nil {
 			return nil, err
 		}
@@ -151,7 +241,7 @@ func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]V
 }
 
 const getVacancy = `-- name: GetVacancy :one
-SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at FROM vacancies WHERE
+SELECT v.id, v.jd, v.name, v.description, v.required_exp, v.pay_day, v.skills, v.created_at, v.updated_at, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd ON v.jd=jd.id  WHERE
                             ($1::uuid IS NULL OR id=$1::uuid)
                             AND ($2::varchar IS NULL OR name=$2::varchar)
 `
@@ -161,9 +251,9 @@ type GetVacancyParams struct {
 	Name pgtype.Text `json:"name"`
 }
 
-func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (Vacancy, error) {
+func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error) {
 	row := q.db.QueryRow(ctx, getVacancy, arg.ID, arg.Name)
-	var i Vacancy
+	var i VacancyWithJd
 	err := row.Scan(
 		&i.ID,
 		&i.Jd,
@@ -174,8 +264,20 @@ func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (Vacancy
 		&i.Skills,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.JdName,
+		&i.JdTags,
+		&i.JdDescription,
 	)
 	return i, err
+}
+
+const removeJobDirection = `-- name: RemoveJobDirection :exec
+DELETE FROM job_directions WHERE id=$1::bigserial
+`
+
+func (q *Queries) RemoveJobDirection(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, removeJobDirection, id)
+	return err
 }
 
 const removeVacancy = `-- name: RemoveVacancy :exec
@@ -234,27 +336,62 @@ func (q *Queries) RespondToVacancy(ctx context.Context, arg RespondToVacancyPara
 	return id, err
 }
 
+const updateJobDirection = `-- name: UpdateJobDirection :one
+UPDATE job_directions SET name=$1::varchar, tags=$2::text[], description=$3::text
+                      WHERE id=$4::bigserial RETURNING id, name, tags, description
+`
+
+type UpdateJobDirectionParams struct {
+	Name        pgtype.Text `json:"name"`
+	Tags        []string    `json:"tags"`
+	Description pgtype.Text `json:"description"`
+	ID          int64       `json:"id"`
+}
+
+func (q *Queries) UpdateJobDirection(ctx context.Context, arg UpdateJobDirectionParams) (JobDirection, error) {
+	row := q.db.QueryRow(ctx, updateJobDirection,
+		arg.Name,
+		arg.Tags,
+		arg.Description,
+		arg.ID,
+	)
+	var i JobDirection
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Tags,
+		&i.Description,
+	)
+	return i, err
+}
+
 const updateVacancy = `-- name: UpdateVacancy :one
-UPDATE vacancies SET jd=$1, name=$2, description=$3, required_exp=$4, pay_day=$5, skills=$6, updated_at=now() RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
+UPDATE vacancies SET jd=$1, name=$6::varchar, description=$2, required_exp=$3, pay_day=$4, skills=$5, updated_at=now()  WHERE
+    ($7::uuid IS NULL OR id=$7::uuid)
+                                                                                                                 AND($8::varchar IS NULL OR name=$8::varchar) RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
 `
 
 type UpdateVacancyParams struct {
-	Jd          int32         `json:"jd"`
-	Name        pgtype.Text   `json:"name"`
-	Description pgtype.Text   `json:"description"`
-	RequiredExp pgtype.Float8 `json:"required_exp"`
-	PayDay      float64       `json:"pay_day"`
-	Skills      []string      `json:"skills"`
+	Jd          int32       `json:"jd"`
+	Description pgtype.Text `json:"description"`
+	RequiredExp pgtype.Text `json:"required_exp"`
+	PayDay      float64     `json:"pay_day"`
+	Skills      []string    `json:"skills"`
+	NewName     string      `json:"new_name"`
+	ID          pgtype.UUID `json:"id"`
+	Name        pgtype.Text `json:"name"`
 }
 
 func (q *Queries) UpdateVacancy(ctx context.Context, arg UpdateVacancyParams) (Vacancy, error) {
 	row := q.db.QueryRow(ctx, updateVacancy,
 		arg.Jd,
-		arg.Name,
 		arg.Description,
 		arg.RequiredExp,
 		arg.PayDay,
 		arg.Skills,
+		arg.NewName,
+		arg.ID,
+		arg.Name,
 	)
 	var i Vacancy
 	err := row.Scan(

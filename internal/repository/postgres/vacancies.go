@@ -21,7 +21,7 @@ func NewVacanciesRepo(db *db.Store) *VacanciesRepo {
 	}
 }
 
-func (r *VacanciesRepo) List(ctx context.Context) (*domain.Vacancies, error) {
+func (r *VacanciesRepo) List(ctx context.Context) (*domain.VacanciesWithJd, error) {
 	vacancies, err := r.db.GetVacancies(ctx, db.GetVacanciesParams{
 		Offset: 0,
 		Limit:  4,
@@ -32,15 +32,14 @@ func (r *VacanciesRepo) List(ctx context.Context) (*domain.Vacancies, error) {
 	return mapVacancies(vacancies), nil
 }
 
-func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*domain.Vacancy, error) {
+func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*domain.VacancyWithJd, error) {
 	vacancy, err := r.db.GetVacancy(ctx, db.GetVacancyParams{
 		ID: uuidPtr2Nullable(vacancyId),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy: %w", err)
 	}
-	domainVacancy := mapVacancy(vacancy)
-	return &domainVacancy, nil
+	return new(mapVacancyWithJd(vacancy)), nil
 }
 
 func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
@@ -52,15 +51,14 @@ func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.Create
 		Jd:          params.Jd,
 		Name:        stringToNullable(params.Name),
 		Description: stringToNullable(params.Description),
-		RequiredExp: nFloat2Nullable(params.RequiredExp),
+		RequiredExp: stringPtrToNullable(params.RequiredExp),
 		PayDay:      payDay,
 		Skills:      params.Skills,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.Create: failed to create vacancy: %w", err)
 	}
-	domainVacancy := mapVacancy(vacancy)
-	return &domainVacancy, nil
+	return new(mapVacancy(vacancy)), nil
 }
 
 func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error {
@@ -81,8 +79,9 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 		}
 
 		updateVacancyParams = db.UpdateVacancyParams{
+			ID:          uuidPtr2Nullable(vacancyId),
 			Jd:          vacancy.Jd,
-			Name:        vacancy.Name,
+			NewName:     vacancy.Name.String,
 			Description: vacancy.Description,
 			RequiredExp: vacancy.RequiredExp,
 			PayDay:      vacancy.PayDay,
@@ -95,20 +94,19 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 			updateVacancyParams.Skills = updVacancy.Skills
 		}
 		if updVacancy.Name != nil && *updVacancy.Name != "" {
-			updateVacancyParams.Name = usernamePtrToNullable(updVacancy.Name)
+			updateVacancyParams.NewName = *updVacancy.Name
 		}
 		if updVacancy.Description != nil && *updVacancy.Description != "" {
-			updateVacancyParams.Description = usernamePtrToNullable(updVacancy.Description)
+			updateVacancyParams.Description = stringPtrToNullable(updVacancy.Description)
 		}
-		if updVacancy.RequiredExp != nil && *updVacancy.RequiredExp != 0 {
-			updateVacancyParams.RequiredExp = nFloat2Nullable(updVacancy.RequiredExp)
+		if updVacancy.RequiredExp != nil && *updVacancy.RequiredExp != "" {
+			updateVacancyParams.RequiredExp = stringPtrToNullable(updVacancy.RequiredExp)
 		}
 		if updVacancy.PayDay != nil && *updVacancy.PayDay > 0 {
 			updateVacancyParams.PayDay = *updVacancy.PayDay
 		}
 
-		vacancy, fnErr = q.UpdateVacancy(ctx, updateVacancyParams)
-		if fnErr != nil {
+		if _, fnErr = q.UpdateVacancy(ctx, updateVacancyParams); fnErr != nil {
 			return fmt.Errorf("vacancies_repo.Update: failed to update vacancy: %w", fnErr)
 		}
 
@@ -120,6 +118,57 @@ func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) err
 	return r.db.RemoveVacancy(ctx, db.RemoveVacancyParams{
 		ID: uuidPtr2Nullable(vacancyId),
 	})
+}
+
+func (r *VacanciesRepo) ListJd(ctx context.Context) (*domain.JobDirections, error) {
+	jds, err := r.db.GetJDs(ctx, db.GetJDsParams{
+		Limit:  100,
+		Offset: 0,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.ListJd: failed to load job directions: %w", err)
+	}
+	return mapJobDirections(jds), nil
+}
+
+func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error) {
+	jd, err := r.db.GetJD(ctx, int64(jdId))
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.GetJd: failed to load job direction: %w", err)
+	}
+	return new(mapJobDirection(jd)), nil
+}
+
+func (r *VacanciesRepo) CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error) {
+	jd, err := r.db.CreateJobDirection(ctx, db.CreateJobDirectionParams{
+		Name:        params.Name,
+		Tags:        params.Tags,
+		Description: params.Description,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.CreateJd: failed to create job direction: %w", err)
+	}
+	return new(mapJobDirection(jd)), nil
+}
+
+func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
+	jd, err := r.db.UpdateJobDirection(ctx, db.UpdateJobDirectionParams{
+		ID:          int64(jdId),
+		Name:        stringPtrToNullable(params.Name),
+		Tags:        params.Tags,
+		Description: stringPtrToNullable(params.Description),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.UpdateJd: failed to update job direction: %w", err)
+	}
+	return new(mapJobDirection(jd)), nil
+}
+
+func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int32) error {
+	if err := r.db.RemoveJobDirection(ctx, int64(jdId)); err != nil {
+		return fmt.Errorf("vacancies_repo.RemoveJd: failed to remove job direction: %w", err)
+	}
+	return nil
 }
 
 func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error) {
@@ -134,8 +183,7 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 		VacancyID:   string2UUID(vacancyId),
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == "23505" {
 				return "", domain.ErrRespondAlreadyExists
 			}
@@ -161,18 +209,37 @@ func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId 
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
 	}
-	domainRespondVacancy := mapRespondVacancy(respondVacancy)
-	return &domainRespondVacancy, nil
+	return new(mapRespondVacancy(respondVacancy)), nil
 }
 
-func mapVacancies(vacancies []db.Vacancy) *domain.Vacancies {
-	domainVacancies := make([]domain.Vacancy, len(vacancies))
+func mapVacancies(vacancies []db.VacancyWithJd) *domain.VacanciesWithJd {
+	domainVacancies := make([]domain.VacancyWithJd, len(vacancies))
 	for i := range vacancies {
-		domainVacancies[i] = mapVacancy(vacancies[i])
+		domainVacancies[i] = mapVacancyWithJd(vacancies[i])
 	}
-	return &domain.Vacancies{
-		Total:     len(vacancies),
-		Vacancies: domainVacancies,
+	return &domain.VacanciesWithJd{
+		Total:           len(vacancies),
+		VacanciesWithJd: domainVacancies,
+	}
+}
+
+func mapVacancyWithJd(v db.VacancyWithJd) domain.VacancyWithJd {
+	return domain.VacancyWithJd{
+		Vacancy: domain.Vacancy{
+			UUID:        uuid2String(v.ID),
+			Name:        v.Name.String,
+			Description: v.Description.String,
+			RequiredExp: v.RequiredExp.String,
+			PayDay:      v.PayDay,
+			Skills:      v.Skills,
+			CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
+			UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+		},
+		JobDirection: domain.JobDirection{
+			JdName:        v.JdName,
+			JdTags:        v.JdTags,
+			JdDescription: v.JdDescription,
+		},
 	}
 }
 
@@ -181,11 +248,30 @@ func mapVacancy(v db.Vacancy) domain.Vacancy {
 		UUID:        uuid2String(v.ID),
 		Name:        v.Name.String,
 		Description: v.Description.String,
-		RequiredExp: v.RequiredExp.Float64,
+		RequiredExp: v.RequiredExp.String,
 		PayDay:      v.PayDay,
 		Skills:      v.Skills,
 		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
 		UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+	}
+}
+
+func mapJobDirections(jds []db.JobDirection) *domain.JobDirections {
+	domainJds := make([]domain.JobDirection, len(jds))
+	for i := range jds {
+		domainJds[i] = mapJobDirection(jds[i])
+	}
+	return &domain.JobDirections{
+		JobDirections: domainJds,
+		Total:         len(domainJds),
+	}
+}
+
+func mapJobDirection(jd db.JobDirection) domain.JobDirection {
+	return domain.JobDirection{
+		JdName:        jd.Name,
+		JdTags:        jd.Tags,
+		JdDescription: jd.Description,
 	}
 }
 
