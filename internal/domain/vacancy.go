@@ -55,7 +55,7 @@ type UpdatedVacancyInput struct {
 	Jd          *int32   `json:"jd,omitempty"`
 	Name        *string  `json:"name,omitempty"`
 	Description *string  `json:"description,omitempty"`
-	RequiredExp *float64 `json:"required_exp,omitempty"`
+	RequiredExp *string  `json:"required_exp,omitempty"`
 	PayDay      *float64 `json:"pay_day,omitempty"`
 	Skills      []string `json:"skills,omitempty"`
 }
@@ -64,7 +64,7 @@ type CreateVacancyInput struct {
 	Jd          int32    `json:"jd,omitempty"`
 	Name        string   `json:"name,omitempty"`
 	Description string   `json:"description,omitempty"`
-	RequiredExp *float64 `json:"required_exp,omitempty"`
+	RequiredExp *string  `json:"required_exp,omitempty"`
 	PayDay      *float64 `json:"pay_day,omitempty"`
 	Skills      []string `json:"skills,omitempty"`
 }
