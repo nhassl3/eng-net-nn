@@ -14,6 +14,21 @@ type Admin struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Case struct {
+	ID          int64       `json:"id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Label       pgtype.Text `json:"label"`
+	Photo       pgtype.Text `json:"photo"`
+}
+
+type CaseStat struct {
+	ID     int64  `json:"id"`
+	CaseID int64  `json:"case_id"`
+	Value  string `json:"value"`
+	Label  string `json:"label"`
+}
+
 type Direction struct {
 	ID          int32       `json:"id"`
 	Name        pgtype.Text `json:"name"`
