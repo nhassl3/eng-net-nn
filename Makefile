@@ -78,7 +78,7 @@ sqlc:
 ## ─── DATABSE CONTROLL ────────────────────────────────────────────────────────
 
 generate-data:
-	@docker exec -i postgres18-$(DB_USER)-$(DB_NAME) psql -U servicehub -d servicehub < /home/nhassl3/Projects/servicehub/scripts/seed.sql
+	@docker exec -i postgres18-$(DB_USER)-$(DB_NAME) psql -U $(DB_USER) -d $(DB_NAME) < ./seed.sql
 	@echo "Successfully created data"
 
 createdb:
