@@ -13,18 +13,18 @@ import (
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 )
 
-type PlanService struct {
+type PlansService struct {
 	repo   postgres.Plan
 	mailer mailer.Notifier
 }
 
-func NewPlanService(repo postgres.Plan, mailer mailer.Notifier) *PlanService {
-	return &PlanService{repo: repo, mailer: mailer}
+func NewPlansService(repo postgres.Plan, mailer mailer.Notifier) *PlansService {
+	return &PlansService{repo: repo, mailer: mailer}
 }
 
 // CreatePlan saves the plan request to the DB and asynchronously notifies the
 // owner by email. SMTP errors are logged but do not fail the request.
-func (s *PlanService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error) {
+func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error) {
 	directionName := strconv.Itoa(int(plan.Direction))
 	name, err := s.repo.GetDirection(ctx, plan.Direction)
 	if name == "" {
@@ -74,7 +74,7 @@ func (s *PlanService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInp
 	return result, nil
 }
 
-func (s *PlanService) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
+func (s *PlansService) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
 	result, err := s.repo.GetPlan(ctx, planId)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
@@ -82,7 +82,7 @@ func (s *PlanService) GetPlan(ctx context.Context, planId string) (*domain.UserP
 	return result, nil
 }
 
-func (s *PlanService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
+func (s *PlansService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
 	result, err := s.repo.GetAllPlans(ctx)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -61,6 +61,6 @@ func NewService(
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
 		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient),
-		Plan:          NewPlanService(repos.Plan, mailer),
+		Plan:          NewPlansService(repos.Plan, mailer),
 	}
 }
