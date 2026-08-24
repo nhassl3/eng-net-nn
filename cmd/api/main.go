@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"log/slog"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,21 +12,19 @@ import (
 
 	"github.com/nhassl3/IpBuild-backend/internal/app"
 	"github.com/nhassl3/IpBuild-backend/internal/config"
-	"github.com/nhassl3/IpBuild-backend/pkg/logger/handlers/slogpretty"
-	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 )
 
-const (
-	envLocal = "local"
-	envProd  = "prod"
-)
+// version is the build version, injected via -ldflags "-X main.version=...".
+// Left as "dev" for local/unversioned builds.
+var version = "dev"
 
 func main() {
 	configFile := os.Getenv("CONFIG_FILE")
 	if configFile == "" {
 		env := os.Getenv("ENVIRONMENT")
 		switch env {
-		case envProd:
+		case "prod":
 			configFile = "config/prod.yaml"
 		default:
 			configFile = "config/local.yaml"
@@ -40,57 +38,47 @@ func main() {
 
 	cfg, err := config.Load(configFile, envFile)
 	if err != nil {
-		slog.Error("failed to load config", sl.ErrLog(err))
-		return
+		// The logger isn't built yet (it depends on cfg.Log), so this one
+		// failure path goes to stderr directly instead of through it.
+		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
+		os.Exit(1)
 	}
 
-	log := setupLogger(cfg.Env)
-	log.Info("starting server", slog.String("env", cfg.Env))
-	log.Debug("debug messages are enabled")
+	log, err := logger.New(logger.Config{
+		Level:      cfg.Log.Level,
+		AddCaller:  cfg.Log.AddCaller,
+		Stacktrace: cfg.Log.Stacktrace,
+		Env:        cfg.Env,
+		Service:    "ipbuild-backend",
+		Version:    version,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to init logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer func() { _ = log.Sync() }()
+
+	log = log.Named("api")
+	log.Info("starting server")
 
 	server := new(app.Server)
 	go func() {
 		if err := server.Run(cfg, log); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("error starting server", sl.ErrLog(err))
+			log.Error("error starting server", logger.Err(err))
 		}
 	}()
-	log.Info("Server started", slog.String("host", cfg.HttpServer.Address))
+	log.Info("server started", logger.String("address", cfg.HttpServer.Address))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Info("Server is down")
+	log.Info("server is shutting down")
+	shutdownStart := time.Now()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Error("error shutting down the server", sl.ErrLog(err))
+		log.Error("error shutting down the server", logger.Err(err))
 	}
-}
-
-func setupLogger(env string) *slog.Logger {
-	var logger *slog.Logger
-
-	switch env {
-	case envLocal:
-		logger = setupPrettySlogger(slog.LevelDebug)
-	case envProd:
-		logger = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-				Level: slog.LevelInfo,
-			}))
-	default:
-		logger = setupPrettySlogger()
-	}
-
-	return logger
-}
-
-func setupPrettySlogger(level ...slog.Level) *slog.Logger {
-	opts := slogpretty.PrettyHandlerOptions{
-		SlogOpts: &slog.HandlerOptions{
-			Level: level[0],
-		},
-	}
-	return slog.New(opts.NewPrettyHandler(os.Stdout))
+	log.Info("shutdown complete", logger.Duration(time.Since(shutdownStart)))
 }
