@@ -16,6 +16,17 @@ type Config struct {
 	Token        `yaml:"token"`
 	SMTP         `yaml:"smtp"`
 	MinIO        `yaml:"minio"`
+	Log          `yaml:"log"`
+}
+
+// Log controls the structured logger built by pkg/logger.
+type Log struct {
+	// Level is one of debug|info|warn|error.
+	Level string `yaml:"level" env-default:"info"`
+	// AddCaller adds the source file:line of each log call.
+	AddCaller bool `yaml:"add_caller" env-default:"true"`
+	// Stacktrace is the minimum level a stacktrace is attached at.
+	Stacktrace string `yaml:"stacktrace" env-default:"error"`
 }
 
 type HttpServer struct {
@@ -101,6 +112,9 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv.SetDefault("minio.endpoint", "localhost:9000")
 	yv.SetDefault("minio.use_ssl", false)
 	yv.SetDefault("minio.bucket", "ipbuild-unet-bucket")
+	yv.SetDefault("log.level", "info")
+	yv.SetDefault("log.add_caller", true)
+	yv.SetDefault("log.stacktrace", "error")
 
 	if err := yv.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("config: read yaml %q: %w", configFile, err)
@@ -155,6 +169,10 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.MinIO.SecretKey = ev.GetString("MINIO_SECRET_KEY")
 	cfg.MinIO.Bucket = yv.GetString("minio.bucket")
 	cfg.MinIO.UseSSL = yv.GetBool("minio.use_ssl")
+
+	cfg.Log.Level = yv.GetString("log.level")
+	cfg.Log.AddCaller = yv.GetBool("log.add_caller")
+	cfg.Log.Stacktrace = yv.GetString("log.stacktrace")
 
 	return cfg, nil
 }

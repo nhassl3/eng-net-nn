@@ -29,3 +29,7 @@ minio:
   endpoint: "localhost:9000"
   bucket: "unet-resume"
   use_ssl: false
+log:
+  level: "info"
+  add_caller: true
+  stacktrace: "error"
