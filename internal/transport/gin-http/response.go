@@ -1,12 +1,11 @@
 package gin_http
 
 import (
-	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 )
 
 type ErrorResponse struct {
@@ -24,7 +23,8 @@ func (h *Handler) paramInt32(c *gin.Context, name, op string) (int32, bool) {
 	raw := c.Param(name)
 	v, err := strconv.ParseInt(raw, 10, 32)
 	if err != nil {
-		h.logger.Error(op+": invalid path param", slog.String("param", name), sl.ErrLog(err))
+		logger.From(c.Request.Context()).Warn("invalid path param",
+			logger.Op(op), logger.String("param", name), logger.Err(err))
 		NewErrorResponse(c, http.StatusBadRequest, "invalid "+name)
 		return 0, false
 	}
