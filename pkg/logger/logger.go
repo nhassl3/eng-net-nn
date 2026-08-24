@@ -71,7 +71,7 @@ func New(cfg Config) (Logger, error) {
 		CallerKey:      "caller",
 		MessageKey:     "msg",
 		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
+		LineEnding:     zapcore.DefaultLineEnding + zapcore.DefaultLineEnding, // '\n\n'
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
 		EncodeTime:     zapcore.ISO8601TimeEncoder,
 		EncodeDuration: zapcore.MillisDurationEncoder,
