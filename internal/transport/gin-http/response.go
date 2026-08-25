@@ -8,12 +8,27 @@ import (
 	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 )
 
+const (
+	BadRequest = "BAD_REQUEST"
+	Internal   = "INTERNAL"
+)
+
 type ErrorResponse struct {
+	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 
+func NewErrorResponseWithCode(c *gin.Context, status int, code, message string) {
+	c.AbortWithStatusJSON(status, ErrorResponse{Code: code, Message: message})
+}
+
 func NewErrorResponse(c *gin.Context, statusCode int, message string) {
-	c.AbortWithStatusJSON(statusCode, ErrorResponse{message})
+	switch statusCode {
+	case http.StatusBadRequest:
+		c.AbortWithStatusJSON(statusCode, ErrorResponse{Code: BadRequest, Message: message})
+	default:
+		c.AbortWithStatusJSON(statusCode, ErrorResponse{Code: Internal, Message: message})
+	}
 }
 
 // paramInt32 parses the named path param as int32, logging and responding
