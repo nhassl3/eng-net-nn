@@ -19,43 +19,49 @@ import (
 func handleError(c *gin.Context, op string, err error) {
 	log := logger.From(c.Request.Context())
 
+	dmnErr, ok := errors.AsType[*domain.DomainError](err)
+	if !ok {
+		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(err))
+		NewErrorResponseWithCode(c, http.StatusInternalServerError, "INTERNAL", "internal server error")
+	}
+
 	switch {
-	case errors.Is(err, domain.ErrUserAlreadyExists),
-		errors.Is(err, domain.ErrVacanciesAlreadyExists),
-		errors.Is(err, domain.ErrVacanciesAlreadyRespond),
-		errors.Is(err, domain.ErrPlanRequestAlreadyExists),
-		errors.Is(err, domain.ErrRespondAlreadyExists),
-		errors.Is(err, domain.ErrVacancyAlreadyExists),
-		errors.Is(err, domain.ErrDirectionHasVacancies):
-		log.Warn("request rejected: conflict", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusConflict, errString(err.Error()))
+	case errors.Is(dmnErr, domain.ErrUserAlreadyExists),
+		errors.Is(dmnErr, domain.ErrVacanciesAlreadyExists),
+		errors.Is(dmnErr, domain.ErrVacanciesAlreadyRespond),
+		errors.Is(dmnErr, domain.ErrPlanRequestAlreadyExists),
+		errors.Is(dmnErr, domain.ErrRespondAlreadyExists),
+		errors.Is(dmnErr, domain.ErrVacancyAlreadyExists),
+		errors.Is(dmnErr, domain.ErrDirectionHasVacancies):
+		log.Warn("request rejected: conflict", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusConflict, dmnErr.Code(), errString(dmnErr.Error()))
 
-	case errors.Is(err, domain.ErrInvalidCredentials),
-		pkgauth.IsAny(err):
-		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusUnauthorized, errString(err.Error()))
+	case errors.Is(dmnErr, domain.ErrInvalidCredentials),
+		pkgauth.IsAny(dmnErr):
+		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusUnauthorized, dmnErr.Code(), errString(dmnErr.Error()))
 
-	case errors.Is(err, domain.ErrUserNotExists),
-		errors.Is(err, domain.ErrVacanciesNotExists),
-		errors.Is(err, domain.ErrPlanRequestNotExists),
-		errors.Is(err, domain.ErrVacancyNotExists),
-		errors.Is(err, domain.ErrDirectionNotFound),
-		errors.Is(err, domain.ErrRespondVacanciesNotExists),
-		errors.Is(err, domain.ErrRespondVacancyNotExists):
-		log.Warn("request rejected: not found", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusNotFound, errString(err.Error()))
+	case errors.Is(dmnErr, domain.ErrUserNotExists),
+		errors.Is(dmnErr, domain.ErrVacanciesNotExists),
+		errors.Is(dmnErr, domain.ErrPlanRequestNotExists),
+		errors.Is(dmnErr, domain.ErrVacancyNotExists),
+		errors.Is(dmnErr, domain.ErrDirectionNotFound),
+		errors.Is(dmnErr, domain.ErrRespondVacanciesNotExists),
+		errors.Is(dmnErr, domain.ErrRespondVacancyNotExists):
+		log.Warn("request rejected: not found", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusNotFound, dmnErr.Error(), errString(dmnErr.Error()))
 
-	case errors.Is(err, domain.ErrFileTooLarge):
-		log.Warn("request rejected: file too large", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusRequestEntityTooLarge, errString(err.Error()))
+	case errors.Is(dmnErr, domain.ErrFileTooLarge):
+		log.Warn("request rejected: file too large", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusRequestEntityTooLarge, dmnErr.Code(), errString(dmnErr.Error()))
 
-	case errors.Is(err, domain.ErrInvalidContentType):
-		log.Warn("request rejected: invalid content type", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusUnsupportedMediaType, errString(err.Error()))
+	case errors.Is(dmnErr, domain.ErrInvalidContentType):
+		log.Warn("request rejected: invalid content type", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusUnsupportedMediaType, dmnErr.Code(), errString(dmnErr.Error()))
 
 	default:
-		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
+		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusInternalServerError, "INTERNAL", "internal server error")
 	}
 }
 
