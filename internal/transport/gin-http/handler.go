@@ -41,9 +41,9 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.MaxMultipartMemory = 16 << 20 // 16 MB
 
 	// Router settings
-	router.Use(middleware.RequestID())     // assigns/propagates X-Request-ID
+	router.Use(middleware.RequestID())       // assigns/propagates X-Request-ID
 	router.Use(middleware.Logging(h.logger)) // structured access log + request-scoped logger in ctx
-	router.Use(middleware.Recovery())      // panic recovery with stacktrace, must run after Logging
+	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     append(allowOrigins, "http://localhost:3000"),
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
@@ -103,8 +103,8 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 				jobDirectionsAdmin.GET("/:id", h.getJd)
 
 				jobDirectionsAdmin.POST("/", h.createJd)
-				jobDirectionsAdmin.PUT("/", h.updateJd)
-				jobDirectionsAdmin.DELETE("/", h.deleteJd)
+				jobDirectionsAdmin.PUT("/:id", h.updateJd)
+				jobDirectionsAdmin.DELETE("/:id", h.deleteJd)
 			}
 
 			planAdmin := admin.Group("/plans")
