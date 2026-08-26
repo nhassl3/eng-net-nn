@@ -1,8 +1,8 @@
 -- name: GetVacancies :many
-SELECT v.*, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd on v.jd=jd.id LIMIT $1 OFFSET $2;
+SELECT * FROM vacancy_with_jd LIMIT $1 OFFSET $2;
 
 -- name: GetVacancy :one
-SELECT v.*, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd ON v.jd=jd.id  WHERE
+SELECT * FROM vacancy_with_jd WHERE
                             (sqlc.narg('id')::uuid IS NULL OR id=sqlc.narg('id')::uuid)
                             AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar);
 

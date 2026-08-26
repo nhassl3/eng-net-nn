@@ -184,7 +184,7 @@ func (q *Queries) GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserResp
 }
 
 const getVacancies = `-- name: GetVacancies :many
-SELECT v.id, v.jd, v.name, v.description, v.required_exp, v.pay_day, v.skills, v.created_at, v.updated_at, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd on v.jd=jd.id LIMIT $1 OFFSET $2
+SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd LIMIT $1 OFFSET $2
 `
 
 type GetVacanciesParams struct {
@@ -192,30 +192,15 @@ type GetVacanciesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetVacanciesRow struct {
-	ID            uuid.UUID          `json:"id"`
-	Jd            int32              `json:"jd"`
-	Name          pgtype.Text        `json:"name"`
-	Description   pgtype.Text        `json:"description"`
-	RequiredExp   pgtype.Text        `json:"required_exp"`
-	PayDay        float64            `json:"pay_day"`
-	Skills        []string           `json:"skills"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	JdName        string             `json:"jd_name"`
-	JdTags        []string           `json:"jd_tags"`
-	JdDescription string             `json:"jd_description"`
-}
-
-func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]GetVacanciesRow, error) {
+func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error) {
 	rows, err := q.db.Query(ctx, getVacancies, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetVacanciesRow{}
+	items := []VacancyWithJd{}
 	for rows.Next() {
-		var i GetVacanciesRow
+		var i VacancyWithJd
 		if err := rows.Scan(
 			&i.ID,
 			&i.Jd,
@@ -241,7 +226,7 @@ func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]G
 }
 
 const getVacancy = `-- name: GetVacancy :one
-SELECT v.id, v.jd, v.name, v.description, v.required_exp, v.pay_day, v.skills, v.created_at, v.updated_at, jd.name as jd_name, jd.tags as jd_tags, jd.description as jd_description FROM vacancies v JOIN job_directions jd ON v.jd=jd.id  WHERE
+SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd WHERE
                             ($1::uuid IS NULL OR id=$1::uuid)
                             AND ($2::varchar IS NULL OR name=$2::varchar)
 `
@@ -251,24 +236,9 @@ type GetVacancyParams struct {
 	Name pgtype.Text `json:"name"`
 }
 
-type GetVacancyRow struct {
-	ID            uuid.UUID          `json:"id"`
-	Jd            int32              `json:"jd"`
-	Name          pgtype.Text        `json:"name"`
-	Description   pgtype.Text        `json:"description"`
-	RequiredExp   pgtype.Text        `json:"required_exp"`
-	PayDay        float64            `json:"pay_day"`
-	Skills        []string           `json:"skills"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	JdName        string             `json:"jd_name"`
-	JdTags        []string           `json:"jd_tags"`
-	JdDescription string             `json:"jd_description"`
-}
-
-func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (GetVacancyRow, error) {
+func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error) {
 	row := q.db.QueryRow(ctx, getVacancy, arg.ID, arg.Name)
-	var i GetVacancyRow
+	var i VacancyWithJd
 	err := row.Scan(
 		&i.ID,
 		&i.Jd,
