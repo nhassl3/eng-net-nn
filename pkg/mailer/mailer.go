@@ -3,12 +3,11 @@ package mailer
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
-	"github.com/nhassl3/IpBuild-backend/pkg/logger/sl"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/wneessen/go-mail"
 )
 
@@ -22,25 +21,31 @@ type Notifier interface {
 
 // NoopNotifier logs notifications without sending emails.
 // Used when SMTP host is not configured (e.g. local dev).
-type NoopNotifier struct{}
+type NoopNotifier struct {
+	log logger.Logger
+}
+
+func NewNoopNotifier(log logger.Logger) *NoopNotifier {
+	return &NoopNotifier{log: log}
+}
 
 func (n *NoopNotifier) NotifyUserAboutVacancy(_ context.Context, vacancyName, userEmail string) error {
-	slog.Info("mailer: noop - for user new applicant", slog.String("vacancy", vacancyName), slog.String("email", userEmail))
+	n.log.Info("noop: notify user about vacancy", logger.String("vacancy", vacancyName), logger.Email("email", userEmail))
 	return nil
 }
 
 func (n *NoopNotifier) NotifyUserAboutPlan(_ context.Context, userEmail string) error {
-	slog.Info("mailer: noop - for user new plan request", slog.String("email", userEmail))
+	n.log.Info("noop: notify user about plan", logger.Email("email", userEmail))
 	return nil
 }
 
 func (n *NoopNotifier) NotifyNewApplicant(_ context.Context, vacancyName, resumeUrl string, form *domain.ApplicantsFormInput) error {
-	slog.Info("mailer: noop — new applicant", slog.String("vacancy", vacancyName), slog.String("email", form.Email))
+	n.log.Info("noop: notify new applicant", logger.String("vacancy", vacancyName), logger.Email("email", form.Email))
 	return nil
 }
 
 func (n *NoopNotifier) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInputEmail) error {
-	slog.Info("mailer: noop — new plan request", slog.String("name", plan.FullName), slog.String("email", plan.EmailToFeedback))
+	n.log.Info("noop: notify new plan", logger.String("name", plan.FullName), logger.Email("email", plan.EmailToFeedback))
 	return nil
 }
 
@@ -65,10 +70,10 @@ type SMTPMailer struct {
 	ownerEmail string
 	queue      chan job
 	wg         sync.WaitGroup
-	logger     *slog.Logger
+	log        logger.Logger
 }
 
-func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, logger *slog.Logger) (*SMTPMailer, error) {
+func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, log logger.Logger) (*SMTPMailer, error) {
 	if from == "" {
 		from = username
 	}
@@ -96,7 +101,7 @@ func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, 
 		from:       from,
 		ownerEmail: ownerEmail,
 		queue:      make(chan job, queueSize),
-		logger:     logger,
+		log:        log,
 	}
 
 	for range numWorkers {
@@ -113,11 +118,15 @@ func (m *SMTPMailer) worker() {
 		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
 		if j.toUser {
 			if err := m.sendToUser(ctx, j.subject, j.body, j.replyTo); err != nil {
-				m.logger.Error("mailer: send to user failed", sl.ErrLog(err))
+				m.log.Error("send to user failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
+			} else {
+				m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", true))
 			}
 		} else {
 			if err := m.sendToOwner(ctx, j.subject, j.body, j.replyTo); err != nil {
-				m.logger.Error("mailer: send to owner failed", sl.ErrLog(err))
+				m.log.Error("send to owner failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
+			} else {
+				m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", false))
 			}
 		}
 		cancel()
@@ -128,8 +137,8 @@ func (m *SMTPMailer) enqueue(j job) {
 	select {
 	case m.queue <- j:
 	default:
-		m.logger.Error("mailer: queue full, notification dropped",
-			slog.String("subject", j.subject))
+		m.log.Error("queue full, notification dropped",
+			logger.Op("SMTPMailer.enqueue"), logger.String("subject", j.subject))
 	}
 }
 

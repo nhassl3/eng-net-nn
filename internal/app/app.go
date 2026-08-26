@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/nhassl3/IpBuild-backend/internal/config"
@@ -14,6 +13,7 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/service"
 	handle "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 	"github.com/nhassl3/IpBuild-backend/pkg/postgres"
@@ -25,7 +25,7 @@ type Server struct {
 	notifier   mailer.Notifier
 }
 
-func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
+func (s *Server) Run(cfg *config.Config, log logger.Logger) error {
 	ctx := context.Background()
 
 	dsn := postgres.DSN(
@@ -36,11 +36,13 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 		cfg.DBSettings.DBName,
 		cfg.DBSettings.SSLMode,
 	)
-	pool, err := postgres.NewPool(ctx, dsn)
+	pool, err := postgres.NewPool(ctx, dsn, log.Named("postgres"))
 	if err != nil {
 		return fmt.Errorf("app: connect postgres: %w", err)
 	}
 	defer pool.Close()
+
+	log.Info("connected to postgres")
 
 	store := db.NewStore(pool)
 	repo := postgres2.NewRepository(store)
@@ -50,10 +52,13 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 		cfg.RedisServer.Username,
 		cfg.RedisServer.Password,
 		cfg.RedisServer.DB,
+		log.Named("redis"),
 	)
 	if err != nil {
 		return fmt.Errorf("app: connect redis: %w", err)
 	}
+
+	log.Info("connected to redis")
 
 	authRedis := redis3.NewAuthRedisRepository(redisClient, cfg.RedisServer.TTL.UserProfile)
 	blacklistRepo := redis3.NewBlacklistRepository(redisClient)
@@ -74,13 +79,13 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	if cfg.SMTP.Host != "" {
 		notifier, err = mailer.NewSMTPMailer(
 			cfg.SMTP.Host, cfg.SMTP.Username, cfg.SMTP.Password,
-			cfg.SMTP.From, cfg.SMTP.WorkEmail, cfg.SMTP.Port, logger,
+			cfg.SMTP.From, cfg.SMTP.WorkEmail, cfg.SMTP.Port, log.Named("mailer"),
 		)
 		if err != nil {
 			return fmt.Errorf("app: create SMTP mailer: %w", err)
 		}
 	} else {
-		notifier = &mailer.NoopNotifier{}
+		notifier = mailer.NewNoopNotifier(log.Named("nop_mailer"))
 	}
 	s.notifier = notifier
 
@@ -96,7 +101,7 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("app: create minio client: %w", err)
 	}
-	logger.Info("Successfully connected to MinIO")
+	log.Info("connected to minio")
 
 	services := service.NewService(
 		repo,
@@ -106,9 +111,10 @@ func (s *Server) Run(cfg *config.Config, logger *slog.Logger) error {
 		blacklistRepo,
 		notifier,
 		minIOClient,
+		log,
 	)
 
-	handler := handle.NewHandler(services, logger)
+	handler := handle.NewHandler(services, log.Named("http"))
 
 	s.httpServer = &http.Server{
 		Addr:           cfg.HttpServer.Address,

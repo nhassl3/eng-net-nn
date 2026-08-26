@@ -1,26 +1,25 @@
 package gin_http
 
 import (
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 )
 
 func (h *Handler) signUp(c *gin.Context) {
 	var input domain.CreateUserInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		h.logger.Error("signUp: bind json", slog.String("err", err.Error()))
+		logger.From(c.Request.Context()).Warn("signUp: bind json", logger.Err(err))
 		NewErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	user, tokenPair, err := h.services.Authorization.CreateUser(c.Request.Context(), &input)
 	if err != nil {
-		h.logger.Error("signUp: create user", slog.String("err", err.Error()))
-		handleError(c, err)
+		handleError(c, "signUp", err)
 		return
 	}
 
@@ -33,7 +32,7 @@ func (h *Handler) signUp(c *gin.Context) {
 func (h *Handler) signIn(c *gin.Context) {
 	var input domain.SignInInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		h.logger.Error("signIn: bind json", slog.String("err", err.Error()))
+		logger.From(c.Request.Context()).Warn("signIn: bind json", logger.Err(err))
 		NewErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -45,15 +44,13 @@ func (h *Handler) signIn(c *gin.Context) {
 
 	user, err := h.services.Authorization.SignIn(c.Request.Context(), &input)
 	if err != nil {
-		h.logger.Error("signIn: sign in", slog.String("err", err.Error()))
-		handleError(c, err)
+		handleError(c, "signIn", err)
 		return
 	}
 
 	tokenPair, err := h.services.Authorization.GenerateToken(c.Request.Context(), user)
 	if err != nil {
-		h.logger.Error("signIn: generate token", slog.String("err", err.Error()))
-		handleError(c, err)
+		handleError(c, "signIn.GenerateToken", err)
 		return
 	}
 
@@ -72,7 +69,7 @@ func (h *Handler) refresh(c *gin.Context) {
 
 	tokenPair, err := h.services.Authorization.RefreshToken(c.Request.Context(), input.RefreshToken)
 	if err != nil {
-		handleError(c, err)
+		handleError(c, "refresh", err)
 		return
 	}
 
@@ -82,7 +79,7 @@ func (h *Handler) refresh(c *gin.Context) {
 func (h *Handler) me(c *gin.Context) {
 	user, err := h.services.Authorization.GetMe(c.Request.Context(), c.GetString(middleware.UserIdCtx))
 	if err != nil {
-		handleError(c, err)
+		handleError(c, "me", err)
 		return
 	}
 
@@ -91,7 +88,7 @@ func (h *Handler) me(c *gin.Context) {
 
 func (h *Handler) logout(c *gin.Context) {
 	if err := h.services.Authorization.Logout(c.Request.Context(), c.GetString(middleware.TokenCtx)); err != nil {
-		handleError(c, err)
+		handleError(c, "logout", err)
 		return
 	}
 

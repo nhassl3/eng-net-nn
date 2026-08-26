@@ -236,6 +236,7 @@ func mapVacancyWithJd(v db.VacancyWithJd) domain.VacancyWithJd {
 			UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
 		},
 		JobDirection: domain.JobDirection{
+			Id:            v.Jd,
 			JdName:        v.JdName,
 			JdTags:        v.JdTags,
 			JdDescription: v.JdDescription,
@@ -269,6 +270,7 @@ func mapJobDirections(jds []db.JobDirection) *domain.JobDirections {
 
 func mapJobDirection(jd db.JobDirection) domain.JobDirection {
 	return domain.JobDirection{
+		Id:            jd.ID,
 		JdName:        jd.Name,
 		JdTags:        jd.Tags,
 		JdDescription: jd.Description,

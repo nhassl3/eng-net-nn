@@ -7,6 +7,7 @@ import (
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/redis"
 	"github.com/nhassl3/IpBuild-backend/pkg/auth"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
@@ -64,10 +65,11 @@ func NewService(
 	blacklist auth.TokenBlacklist,
 	mailer mailer.Notifier,
 	minioClient minio.ByteStorage,
+	log logger.Logger,
 ) *Service {
 	return &Service{
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
-		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient),
+		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient, log.Named("vacancies")),
 		Plan:          NewPlansService(repos.Plan, mailer),
 	}
 }

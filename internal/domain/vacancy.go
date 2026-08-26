@@ -16,6 +16,7 @@ type Vacancy struct {
 }
 
 type JobDirection struct {
+	Id            int32    `json:"id"`
 	JdName        string   `json:"jd_name"`
 	JdDescription string   `json:"jd_description"`
 	JdTags        []string `json:"jd_tags"`

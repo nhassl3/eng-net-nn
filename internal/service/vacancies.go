@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
+	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
@@ -29,10 +29,11 @@ type VacanciesService struct {
 	repo        postgres.Vacancies
 	mailer      mailer.Notifier
 	minioClient minio.ByteStorage
+	log         logger.Logger
 }
 
-func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, minioClient minio.ByteStorage) *VacanciesService {
-	return &VacanciesService{repo: repo, mailer: mailer, minioClient: minioClient}
+func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, minioClient minio.ByteStorage, log logger.Logger) *VacanciesService {
+	return &VacanciesService{repo: repo, mailer: mailer, minioClient: minioClient, log: log}
 }
 
 func (s *VacanciesService) List(ctx context.Context) (*domain.VacanciesWithJd, error) {
@@ -150,8 +151,8 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, objectName, applicantsForm); err != nil {
 		// Don't leave an orphaned object behind if persisting the response failed.
 		if delErr := s.minioClient.Delete(ctx, objectName); delErr != nil {
-			slog.Error("vacancies_service.Respond: cleanup orphaned object",
-				slog.String("object", objectName), slog.String("err", delErr.Error()))
+			s.log.Error("cleanup orphaned object failed",
+				logger.Op("Respond"), logger.String("object", objectName), logger.Err(delErr))
 		}
 		return fmt.Errorf("vacancies_service.Respond: %w", err)
 	}
@@ -159,8 +160,8 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 	// A failed notification link must not fail the whole request.
 	resumeURL, err := s.minioClient.PresignedURL(ctx, objectName, resumeEmailTTL)
 	if err != nil {
-		slog.Error("vacancies_service.Respond: presign resume for email",
-			slog.String("object", objectName), slog.String("err", err.Error()))
+		s.log.Warn("presign resume for email failed",
+			logger.Op("Respond"), logger.String("object", objectName), logger.Err(err))
 	}
 
 	go func() {
@@ -179,8 +180,8 @@ func (s *VacanciesService) presignResume(ctx context.Context, rv *domain.Respond
 	}
 	url, err := s.minioClient.PresignedURL(ctx, rv.ResumeUrl, resumeViewTTL)
 	if err != nil {
-		slog.Error("vacancies_service: presign resume",
-			slog.String("object", rv.ResumeUrl), slog.String("err", err.Error()))
+		s.log.Warn("presign resume failed",
+			logger.Op("presignResume"), logger.String("object", rv.ResumeUrl), logger.Err(err))
 		rv.ResumeUrl = ""
 		return
 	}

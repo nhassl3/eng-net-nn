@@ -4,7 +4,6 @@ go 1.26.2
 
 require (
 	aidanwoods.dev/go-paseto v1.6.0
-	github.com/fatih/color v1.19.0
 	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
@@ -13,9 +12,9 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/minio/minio-go/v7 v7.2.0
 	github.com/redis/go-redis/v9 v9.20.0
-	github.com/samber/slog-gin v1.21.1
 	github.com/spf13/viper v1.21.0
 	github.com/wneessen/go-mail v0.7.3
+	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.52.0
 )
 
@@ -43,7 +42,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
@@ -66,9 +64,8 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.27.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
