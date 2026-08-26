@@ -12,7 +12,13 @@ import (
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
-	vacancies, err := h.services.Vacancies.List(c.Request.Context())
+	var input domain.GetAllInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	vacancies, err := h.services.Vacancies.List(c.Request.Context(), input.Limit, input.Offset)
 	if err != nil {
 		handleError(c, "getAllVacancies", err)
 		return
@@ -73,7 +79,12 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 }
 
 func (h *Handler) listJd(c *gin.Context) {
-	JDs, err := h.services.Vacancies.ListJd(c.Request.Context())
+	var input domain.GetAllInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	JDs, err := h.services.Vacancies.ListJd(c.Request.Context(), input.Limit, input.Offset)
 	if err != nil {
 		handleError(c, "listJd", err)
 		return

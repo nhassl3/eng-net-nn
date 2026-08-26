@@ -21,10 +21,13 @@ func NewVacanciesRepo(db *db.Store) *VacanciesRepo {
 	}
 }
 
-func (r *VacanciesRepo) List(ctx context.Context) (*domain.VacanciesWithJd, error) {
+func (r *VacanciesRepo) List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error) {
+	if limit == 0 {
+		limit = 4
+	}
 	vacancies, err := r.db.GetVacancies(ctx, db.GetVacanciesParams{
-		Offset: 0,
-		Limit:  4,
+		Offset: offset,
+		Limit:  limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.List: failed to load vacancies: %w", err)
@@ -120,10 +123,13 @@ func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) err
 	})
 }
 
-func (r *VacanciesRepo) ListJd(ctx context.Context) (*domain.JobDirections, error) {
+func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error) {
+	if limit == 0 {
+		limit = 4
+	}
 	jds, err := r.db.GetJDs(ctx, db.GetJDsParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.ListJd: failed to load job directions: %w", err)

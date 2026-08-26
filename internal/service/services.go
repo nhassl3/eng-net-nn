@@ -25,14 +25,14 @@ type Authorization interface {
 
 // Vacancies service — vacancy CRUD and applicant responses
 type Vacancies interface {
-	List(ctx context.Context) (*domain.VacanciesWithJd, error)
+	List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error)
 	GetVacancy(ctx context.Context, vacancyId string) (*domain.VacancyWithJd, error)
 
 	Create(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error)
 	Update(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) (*domain.Vacancy, error)
 	Delete(ctx context.Context, vacancyId string) error
 
-	ListJd(ctx context.Context) (*domain.JobDirections, error)
+	ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error)
 	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
 
 	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
