@@ -23,17 +23,17 @@ DELETE FROM vacancies WHERE
 SELECT * FROM job_directions LIMIT $1 OFFSET $2;
 
 -- name: GetJD :one
-SELECT * FROM job_directions WHERE id=sqlc.arg('id')::bigserial LIMIT 1;
+SELECT * FROM job_directions WHERE id=sqlc.arg('id')::bigint LIMIT 1;
 
 -- name: CreateJobDirection :one
 INSERT INTO job_directions (name, tags, description) VALUES (sqlc.arg('name')::varchar, sqlc.arg('tags')::text[], sqlc.arg('description')::text) RETURNING *;
 
 -- name: UpdateJobDirection :one
 UPDATE job_directions SET name=sqlc.narg('name')::varchar, tags=sqlc.narg('tags')::text[], description=sqlc.narg('description')::text
-                      WHERE id=sqlc.arg('id')::bigserial RETURNING *;
+                      WHERE id=sqlc.arg('id')::bigint RETURNING *;
 
 -- name: RemoveJobDirection :exec
-DELETE FROM job_directions WHERE id=sqlc.arg('id')::bigserial;
+DELETE FROM job_directions WHERE id=sqlc.arg('id')::bigint;
 
 -- name: RespondToVacancy :one
 INSERT INTO user_responds (full_name, phone_number, email, city, exp, description, resume, vacancy_id)

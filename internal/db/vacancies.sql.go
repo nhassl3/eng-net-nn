@@ -72,7 +72,7 @@ func (q *Queries) CreateVacancy(ctx context.Context, arg CreateVacancyParams) (V
 }
 
 const getJD = `-- name: GetJD :one
-SELECT id, name, tags, description FROM job_directions WHERE id=$1::bigserial LIMIT 1
+SELECT id, name, tags, description FROM job_directions WHERE id=$1::bigint LIMIT 1
 `
 
 func (q *Queries) GetJD(ctx context.Context, id int64) (JobDirection, error) {
@@ -192,7 +192,7 @@ type GetVacanciesParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type VacancyWithJd struct {
+type GetVacanciesRow struct {
 	ID            uuid.UUID          `json:"id"`
 	Jd            int32              `json:"jd"`
 	Name          pgtype.Text        `json:"name"`
@@ -207,15 +207,15 @@ type VacancyWithJd struct {
 	JdDescription string             `json:"jd_description"`
 }
 
-func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error) {
+func (q *Queries) GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]GetVacanciesRow, error) {
 	rows, err := q.db.Query(ctx, getVacancies, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []VacancyWithJd{}
+	items := []GetVacanciesRow{}
 	for rows.Next() {
-		var i VacancyWithJd
+		var i GetVacanciesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Jd,
@@ -251,9 +251,24 @@ type GetVacancyParams struct {
 	Name pgtype.Text `json:"name"`
 }
 
-func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error) {
+type GetVacancyRow struct {
+	ID            uuid.UUID          `json:"id"`
+	Jd            int32              `json:"jd"`
+	Name          pgtype.Text        `json:"name"`
+	Description   pgtype.Text        `json:"description"`
+	RequiredExp   pgtype.Text        `json:"required_exp"`
+	PayDay        float64            `json:"pay_day"`
+	Skills        []string           `json:"skills"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	JdName        string             `json:"jd_name"`
+	JdTags        []string           `json:"jd_tags"`
+	JdDescription string             `json:"jd_description"`
+}
+
+func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (GetVacancyRow, error) {
 	row := q.db.QueryRow(ctx, getVacancy, arg.ID, arg.Name)
-	var i VacancyWithJd
+	var i GetVacancyRow
 	err := row.Scan(
 		&i.ID,
 		&i.Jd,
@@ -272,7 +287,7 @@ func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (Vacancy
 }
 
 const removeJobDirection = `-- name: RemoveJobDirection :exec
-DELETE FROM job_directions WHERE id=$1::bigserial
+DELETE FROM job_directions WHERE id=$1::bigint
 `
 
 func (q *Queries) RemoveJobDirection(ctx context.Context, id int64) error {
@@ -338,7 +353,7 @@ func (q *Queries) RespondToVacancy(ctx context.Context, arg RespondToVacancyPara
 
 const updateJobDirection = `-- name: UpdateJobDirection :one
 UPDATE job_directions SET name=$1::varchar, tags=$2::text[], description=$3::text
-                      WHERE id=$4::bigserial RETURNING id, name, tags, description
+                      WHERE id=$4::bigint RETURNING id, name, tags, description
 `
 
 type UpdateJobDirectionParams struct {
