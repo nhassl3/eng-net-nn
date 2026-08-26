@@ -26,8 +26,8 @@ type Querier interface {
 	GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserRespond, error)
 	GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error)
 	GetUser(ctx context.Context, arg GetUserParams) (User, error)
-	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]GetVacanciesRow, error)
-	GetVacancy(ctx context.Context, arg GetVacancyParams) (GetVacancyRow, error)
+	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error)
+	GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error)
 	IsAdmin(ctx context.Context, dollar_1 uuid.UUID) (bool, error)
 	RemoveAdmin(ctx context.Context, dollar_1 uuid.UUID) error
 	RemoveJobDirection(ctx context.Context, id int64) error

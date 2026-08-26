@@ -91,3 +91,18 @@ type Vacancy struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
+
+type VacancyWithJd struct {
+	ID            uuid.UUID          `json:"id"`
+	Jd            int32              `json:"jd"`
+	Name          pgtype.Text        `json:"name"`
+	Description   pgtype.Text        `json:"description"`
+	RequiredExp   pgtype.Text        `json:"required_exp"`
+	PayDay        float64            `json:"pay_day"`
+	Skills        []string           `json:"skills"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	JdName        string             `json:"jd_name"`
+	JdTags        []string           `json:"jd_tags"`
+	JdDescription string             `json:"jd_description"`
+}
