@@ -214,7 +214,7 @@ func (h *Handler) getRespondVacancy(c *gin.Context) {
 }
 
 func parseQuery(c *gin.Context) (int32, int32) {
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "4"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if err != nil {
 		limit = 4
 	}
