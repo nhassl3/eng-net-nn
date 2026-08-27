@@ -36,8 +36,8 @@ func NewVacanciesService(repo postgres.Vacancies, mailer mailer.Notifier, minioC
 	return &VacanciesService{repo: repo, mailer: mailer, minioClient: minioClient, log: log}
 }
 
-func (s *VacanciesService) List(ctx context.Context) (*domain.VacanciesWithJd, error) {
-	vacancies, err := s.repo.List(ctx)
+func (s *VacanciesService) List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error) {
+	vacancies, err := s.repo.List(ctx, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.List: %w", err)
 	}
@@ -83,8 +83,8 @@ func (s *VacanciesService) Delete(ctx context.Context, vacancyId string) error {
 	return nil
 }
 
-func (s *VacanciesService) ListJd(ctx context.Context) (*domain.JobDirections, error) {
-	jd, err := s.repo.ListJd(ctx)
+func (s *VacanciesService) ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error) {
+	jd, err := s.repo.ListJd(ctx, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.ListJd: %w", err)
 	}

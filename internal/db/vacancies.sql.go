@@ -88,7 +88,7 @@ func (q *Queries) GetJD(ctx context.Context, id int64) (JobDirection, error) {
 }
 
 const getJDs = `-- name: GetJDs :many
-SELECT id, name, tags, description FROM job_directions LIMIT $1 OFFSET $2
+SELECT id, name, tags, description FROM job_directions ORDER BY id LIMIT $1 OFFSET $2
 `
 
 type GetJDsParams struct {
@@ -122,7 +122,7 @@ func (q *Queries) GetJDs(ctx context.Context, arg GetJDsParams) ([]JobDirection,
 }
 
 const getRespondVacancies = `-- name: GetRespondVacancies :many
-SELECT id, full_name, phone_number, email, city, exp, description, resume, vacancy_id, created_at FROM user_responds LIMIT $1 OFFSET $2
+SELECT id, full_name, phone_number, email, city, exp, description, resume, vacancy_id, created_at FROM user_responds ORDER BY created_at DESC, id LIMIT $1 OFFSET $2
 `
 
 type GetRespondVacanciesParams struct {
@@ -184,7 +184,7 @@ func (q *Queries) GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserResp
 }
 
 const getVacancies = `-- name: GetVacancies :many
-SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd LIMIT $1 OFFSET $2
+SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd ORDER BY created_at DESC, id LIMIT $1 OFFSET $2
 `
 
 type GetVacanciesParams struct {

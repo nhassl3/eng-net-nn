@@ -24,7 +24,6 @@ type JobDirection struct {
 
 type JobDirections struct {
 	JobDirections []JobDirection `json:"job_directions"`
-	Total         int            `json:"total"`
 }
 
 type VacancyWithJd struct {
@@ -35,7 +34,6 @@ type VacancyWithJd struct {
 // VacanciesWithJd - main struct
 type VacanciesWithJd struct {
 	VacanciesWithJd []VacancyWithJd `json:"vacancies"`
-	Total           int             `json:"total"`
 }
 
 type CreateJobDirectionInput struct {
@@ -52,7 +50,6 @@ type UpdateJobDirectionInput struct {
 
 type RespondVacancies struct {
 	RespondVacancies []RespondVacancy `json:"respond_vacancies"`
-	Total            int              `json:"total"`
 }
 
 type RespondVacancy struct {
@@ -70,7 +67,6 @@ type RespondVacancy struct {
 
 type Vacancies struct {
 	Vacancies []Vacancy `json:"vacancies"`
-	Total     int       `json:"total"`
 }
 
 type ApplicantsFormInput struct {
@@ -102,4 +98,9 @@ type CreateVacancyInput struct {
 	RequiredExp *string  `json:"required_exp,omitempty"`
 	PayDay      *float64 `json:"pay_day,omitempty"`
 	Skills      []string `json:"skills,omitempty"`
+}
+
+type GetAllInput struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
