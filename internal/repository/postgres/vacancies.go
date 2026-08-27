@@ -228,7 +228,6 @@ func mapVacancies(vacancies []db.VacancyWithJd) *domain.VacanciesWithJd {
 		domainVacancies[i] = mapVacancyWithJd(vacancies[i])
 	}
 	return &domain.VacanciesWithJd{
-		Total:           len(vacancies),
 		VacanciesWithJd: domainVacancies,
 	}
 }
@@ -274,7 +273,6 @@ func mapJobDirections(jds []db.JobDirection) *domain.JobDirections {
 	}
 	return &domain.JobDirections{
 		JobDirections: domainJds,
-		Total:         len(domainJds),
 	}
 }
 
@@ -293,7 +291,6 @@ func mapRespondVacancies(respondVacancies []db.UserRespond) *domain.RespondVacan
 		domainRespondVacancies[i] = mapRespondVacancy(respondVacancies[i])
 	}
 	return &domain.RespondVacancies{
-		Total:            len(respondVacancies),
 		RespondVacancies: domainRespondVacancies,
 	}
 }

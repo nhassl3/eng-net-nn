@@ -1,5 +1,5 @@
 -- name: GetVacancies :many
-SELECT * FROM vacancy_with_jd LIMIT $1 OFFSET $2;
+SELECT * FROM vacancy_with_jd ORDER BY created_at DESC, id LIMIT $1 OFFSET $2;
 
 -- name: GetVacancy :one
 SELECT * FROM vacancy_with_jd WHERE
@@ -20,7 +20,7 @@ DELETE FROM vacancies WHERE
                         AND(sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar);
 
 -- name: GetJDs :many
-SELECT * FROM job_directions LIMIT $1 OFFSET $2;
+SELECT * FROM job_directions ORDER BY id LIMIT $1 OFFSET $2;
 
 -- name: GetJD :one
 SELECT * FROM job_directions WHERE id=sqlc.arg('id')::bigint LIMIT 1;
@@ -48,7 +48,7 @@ VALUES (
         sqlc.arg('vacancy_id')) RETURNING id;
 
 -- name: GetRespondVacancies :many
-SELECT * FROM user_responds LIMIT $1 OFFSET $2;
+SELECT * FROM user_responds ORDER BY created_at DESC, id LIMIT $1 OFFSET $2;
 
 -- name: GetRespondVacancy :one
 SELECT * FROM user_responds WHERE id=$1 LIMIT 1;
