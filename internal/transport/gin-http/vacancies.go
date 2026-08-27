@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -12,13 +13,8 @@ import (
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
-	var input domain.GetAllInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		NewErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	vacancies, err := h.services.Vacancies.List(c.Request.Context(), input.Limit, input.Offset)
+	limit, offset := parseQuery(c)
+	vacancies, err := h.services.Vacancies.List(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllVacancies", err)
 		return
@@ -79,12 +75,8 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 }
 
 func (h *Handler) listJd(c *gin.Context) {
-	var input domain.GetAllInput
-	if err := c.ShouldBindJSON(&input); err != nil {
-		NewErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	JDs, err := h.services.Vacancies.ListJd(c.Request.Context(), input.Limit, input.Offset)
+	limit, offset := parseQuery(c)
+	JDs, err := h.services.Vacancies.ListJd(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "listJd", err)
 		return
@@ -219,4 +211,16 @@ func (h *Handler) getRespondVacancy(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, respondVacancy)
+}
+
+func parseQuery(c *gin.Context) (int32, int32) {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "4"))
+	if err != nil {
+		limit = 4
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
+	return int32(limit), int32(offset)
 }

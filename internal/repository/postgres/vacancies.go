@@ -146,9 +146,13 @@ func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int32) (*domain.JobDirec
 }
 
 func (r *VacanciesRepo) CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error) {
+	tags := params.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	jd, err := r.db.CreateJobDirection(ctx, db.CreateJobDirectionParams{
 		Name:        params.Name,
-		Tags:        params.Tags,
+		Tags:        tags,
 		Description: params.Description,
 	})
 	if err != nil {

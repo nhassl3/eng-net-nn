@@ -74,7 +74,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 		vacancies := api.Group("/vacancies")
 		{
-			vacancies.GET("/", h.getAllVacancies)
+			vacancies.GET("", h.getAllVacancies)
 			vacancies.GET("/:id", h.getVacancy)
 			vacancies.POST("/respond", h.respond)
 		}
@@ -99,7 +99,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 			jobDirectionsAdmin := admin.Group("/job_directions")
 			{
-				jobDirectionsAdmin.GET("/", h.listJd)
+				jobDirectionsAdmin.GET("", h.listJd)
 				jobDirectionsAdmin.GET("/:id", h.getJd)
 
 				jobDirectionsAdmin.POST("/", h.createJd)
