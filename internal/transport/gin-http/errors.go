@@ -3,6 +3,7 @@ package gin_http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -24,14 +25,15 @@ func handleError(c *gin.Context, op string, err error) {
 		errors.Is(err, domain.ErrVacanciesAlreadyRespond),
 		errors.Is(err, domain.ErrPlanRequestAlreadyExists),
 		errors.Is(err, domain.ErrRespondAlreadyExists),
-		errors.Is(err, domain.ErrVacancyAlreadyExists):
+		errors.Is(err, domain.ErrVacancyAlreadyExists),
+		errors.Is(err, domain.ErrDirectionHasVacancies):
 		log.Warn("request rejected: conflict", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusConflict, err.Error())
+		NewErrorResponse(c, http.StatusConflict, errString(err.Error()))
 
 	case errors.Is(err, domain.ErrInvalidCredentials),
 		pkgauth.IsAny(err):
 		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusUnauthorized, err.Error())
+		NewErrorResponse(c, http.StatusUnauthorized, errString(err.Error()))
 
 	case errors.Is(err, domain.ErrUserNotExists),
 		errors.Is(err, domain.ErrVacanciesNotExists),
@@ -41,18 +43,22 @@ func handleError(c *gin.Context, op string, err error) {
 		errors.Is(err, domain.ErrRespondVacanciesNotExists),
 		errors.Is(err, domain.ErrRespondVacancyNotExists):
 		log.Warn("request rejected: not found", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusNotFound, err.Error())
+		NewErrorResponse(c, http.StatusNotFound, errString(err.Error()))
 
 	case errors.Is(err, domain.ErrFileTooLarge):
 		log.Warn("request rejected: file too large", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusRequestEntityTooLarge, err.Error())
+		NewErrorResponse(c, http.StatusRequestEntityTooLarge, errString(err.Error()))
 
 	case errors.Is(err, domain.ErrInvalidContentType):
 		log.Warn("request rejected: invalid content type", logger.Op(op), logger.Err(err))
-		NewErrorResponse(c, http.StatusUnsupportedMediaType, err.Error())
+		NewErrorResponse(c, http.StatusUnsupportedMediaType, errString(err.Error()))
 
 	default:
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(err))
 		NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
 	}
+}
+
+func errString(errStr string) string {
+	return errStr[1+strings.LastIndex(errStr, ":"):]
 }
