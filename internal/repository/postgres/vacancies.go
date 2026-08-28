@@ -176,6 +176,12 @@ func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int32, params *domain
 
 func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int32) error {
 	if err := r.db.RemoveJobDirection(ctx, int64(jdId)); err != nil {
+		// 23503 — foreign key violation: vacancies still reference this direction.
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+			if pgErr.Code == "23503" {
+				return domain.ErrDirectionHasVacancies
+			}
+		}
 		return fmt.Errorf("vacancies_repo.RemoveJd: failed to remove job direction: %w", err)
 	}
 	return nil
