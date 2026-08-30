@@ -20,4 +20,5 @@ var (
 	ErrRespondVacancyNotExists   = errors.New("respond vacancy does not exists")
 	ErrFileTooLarge              = errors.New("file too large")
 	ErrInvalidContentType        = errors.New("invalid content type")
+	ErrDirectionHasVacancies     = errors.New("conflict with already created vacancies")
 )
