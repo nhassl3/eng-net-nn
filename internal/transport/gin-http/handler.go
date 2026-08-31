@@ -52,10 +52,21 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	origins := append(append([]string{}, allowOrigins...), "http://localhost:3000")
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"*"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowOrigins: origins,
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		// Заголовки перечислены не поимённо, а  "*": при AllowCredentials: true
+		// браузер считает "*" в Access-Control-Allow-Headers литеральным именем
+		// заголовка, а не подстановкой, и режет preflight с Authorization
+		// и X-Requested-With.
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+			middleware.RequestIDHeader,
+		},
+		ExposeHeaders:    []string{"Content-Length", middleware.RequestIDHeader},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	})) // CORS Policy
