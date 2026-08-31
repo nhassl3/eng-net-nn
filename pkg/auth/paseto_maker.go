@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -79,7 +80,13 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 
 	token, err := parser.ParseV4Local(p.key, tokenStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("paseto: parse token: %w", err)
+		// NotExpired — единственное правило парсера, поэтому RuleError означает
+		// именно истёкший токен; всё остальное (ключ, подпись, формат) — битый.
+		// Без этого различия транспорт не может ответить 401 вместо 500.
+		if errors.Is(err, paseto.RuleError{}) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
 	}
 
 	jti, err := token.GetJti()
