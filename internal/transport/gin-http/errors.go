@@ -22,6 +22,7 @@ func handleError(c *gin.Context, op string, err error) {
 	if !ok {
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(err))
 		NewErrorResponseWithCode(c, http.StatusInternalServerError, Internal, "internal server error")
+		return
 	}
 
 	switch {
