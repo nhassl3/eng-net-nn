@@ -123,16 +123,7 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
-		switch {
-		case errors.Is(err, auth.ErrInvalidToken):
-			return nil, domain.ErrInvalidToken
-		case errors.Is(err, auth.ErrExpiredToken):
-			return nil, domain.ErrExpiredToken
-		case errors.Is(err, auth.ErrTokenRevoked):
-			return nil, domain.ErrTokenRevoked
-		default:
-			return nil, fmt.Errorf("auth_service.ParseToken: %w", err)
-		}
+		return nil, mapTokenError("auth_service.ParseToken", err)
 	}
 
 	user, err := s.GetMe(ctx, payload.UID)
@@ -146,7 +137,7 @@ func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.Use
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
 	payload, err := s.refreshMaker.VerifyToken(refreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
+		return nil, mapTokenError("auth_service.RefreshToken", err)
 	}
 
 	user, err := s.GetMe(ctx, payload.UID)
@@ -164,7 +155,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken string) error {
 	payload, err := s.accessMaker.VerifyToken(accessToken)
 	if err != nil {
-		return fmt.Errorf("auth_service.Logout: %w", err)
+		return mapTokenError("auth_service.Logout", err)
 	}
 
 	if err := s.blacklist.Blacklist(ctx, payload.JTI, payload.ExpiredAt); err != nil {
@@ -174,7 +165,7 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 	if refreshToken != "" {
 		payloadRefresh, err := s.refreshMaker.VerifyToken(refreshToken)
 		if err != nil {
-			return fmt.Errorf("auth_service.Logout: payload refresh: %w", err)
+			return mapTokenError("auth_service.Logout: payload refresh", err)
 		}
 
 		if err := s.blacklist.Blacklist(ctx, payloadRefresh.JTI, payloadRefresh.ExpiredAt); err != nil {
@@ -206,6 +197,21 @@ func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, err
 		user.Role = "user"
 	}
 	return user, nil
+}
+
+// mapTokenError переводит ошибки токен-мейкера в доменные, чтобы транспорт
+// отвечал 401, а не 500: handleError понимает только *domain.DomainError.
+func mapTokenError(op string, err error) error {
+	switch {
+	case errors.Is(err, auth.ErrInvalidToken):
+		return domain.ErrInvalidToken
+	case errors.Is(err, auth.ErrExpiredToken):
+		return domain.ErrExpiredToken
+	case errors.Is(err, auth.ErrTokenRevoked):
+		return domain.ErrTokenRevoked
+	default:
+		return fmt.Errorf("%s: %w", op, err)
+	}
 }
 
 func isDuplicateError(err error) bool {
