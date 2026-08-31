@@ -47,8 +47,12 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.Use(middleware.RequestID())       // assigns/propagates X-Request-ID
 	router.Use(middleware.Logging(h.logger)) // structured access log + request-scoped logger in ctx
 	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
+	// One list for both CORS and the cross-site guard, so an origin can never
+	// be allowed by one and rejected by the other.
+	origins := append(append([]string{}, allowOrigins...), "http://localhost:3000")
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     append(allowOrigins, "http://localhost:3000"),
+		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -63,16 +67,19 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 		}
 	}
 
-	auth := router.Group("/auth")
+	// The refresh cookie is SameSite=None in production, so every endpoint that
+	// acts on it needs CSRF protection: an origin allowlist on the group, plus
+	// a preflight-forcing header on /refresh, which authenticates by cookie alone.
+	auth := router.Group("/auth", middleware.CrossSiteGuard(origins))
 	{
 		auth.POST("/signup", h.signUp)
 		auth.POST("/login", h.signIn)
-		auth.POST("/refresh", h.refresh)
+		auth.POST("/refresh", middleware.RequireRequestedWith, h.refresh)
 	}
 
 	api := router.Group("/api")
 	{
-		api.POST("/logout", h.middleware.UserIdentity, h.logout)
+		api.POST("/logout", middleware.CrossSiteGuard(origins), h.middleware.UserIdentity, h.logout)
 		api.GET("/me", h.middleware.UserIdentity, h.me)
 
 		vacancies := api.Group("/vacancies")
