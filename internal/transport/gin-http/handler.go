@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/nhassl3/IpBuild-backend/internal/config"
 	"github.com/nhassl3/IpBuild-backend/internal/service"
 	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
 	valid "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/validator"
@@ -17,13 +18,15 @@ type Handler struct {
 	services   *service.Service
 	logger     logger.Logger
 	middleware *middleware.AuthInterceptor
+	tokenCfg   *config.Token
 }
 
-func NewHandler(services *service.Service, logger logger.Logger) *Handler {
+func NewHandler(services *service.Service, logger logger.Logger, tokenCfg *config.Token) *Handler {
 	return &Handler{
 		services:   services,
 		logger:     logger,
 		middleware: middleware.NewAuthInterceptor(services.Authorization),
+		tokenCfg:   tokenCfg,
 	}
 }
 
@@ -46,7 +49,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     append(allowOrigins, "http://localhost:3000"),
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
