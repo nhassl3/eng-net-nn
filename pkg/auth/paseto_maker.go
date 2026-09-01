@@ -35,6 +35,11 @@ func (p *PASETOMaker) CreateToken(username, uid, role string) (string, error) {
 	return p.createTokenWithJTI(username, uid, role, uuid.New().String(), time.Now())
 }
 
+// GetTTL returns TTL for token in seconds
+func (p *PASETOMaker) GetTTL() int {
+	return int(p.ttl.Seconds())
+}
+
 func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti string, startTime time.Time) (string, error) {
 	if startTime.Equal(time.Time{}) {
 		startTime = time.Now()
@@ -104,7 +109,7 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 
 	expiredAt, err := token.GetExpiration()
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrExpiredToken
 	}
 
 	return &Payload{
