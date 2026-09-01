@@ -19,6 +19,9 @@ const (
 	FileTooLarge             = "FILE_TOO_LARGE"
 	InvalidContentType       = "INVALID_CONTENT_TYPE"
 	DirectionHasVacancies    = "DIRECTION_HAS_VACANCIES"
+	TokenExpired             = "TOKEN_EXPIRED"
+	InvalidToken             = "INVALID_TOKEN"
+	TokenRevoked             = "TOKEN_REVOKED"
 )
 
 type DomainError struct {
@@ -57,4 +60,7 @@ var (
 	ErrFileTooLarge              = newError(FileTooLarge, "file too large")
 	ErrInvalidContentType        = newError(InvalidContentType, "invalid content type")
 	ErrDirectionHasVacancies     = newError(DirectionHasVacancies, "conflict with already created vacancies")
+	ErrExpiredToken              = newError(TokenExpired, "expired token")
+	ErrInvalidToken              = newError(InvalidToken, "invalid token")
+	ErrTokenRevoked              = newError(TokenRevoked, "token revoked")
 )
