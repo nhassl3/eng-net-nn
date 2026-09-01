@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
-	pkgauth "github.com/nhassl3/IpBuild-backend/pkg/auth"
 	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 )
 
@@ -22,7 +21,7 @@ func handleError(c *gin.Context, op string, err error) {
 	dmnErr, ok := errors.AsType[*domain.DomainError](err)
 	if !ok {
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(err))
-		NewErrorResponseWithCode(c, http.StatusInternalServerError, "INTERNAL", "internal server error")
+		NewErrorResponseWithCode(c, http.StatusInternalServerError, Internal, "internal server error")
 	}
 
 	switch {
@@ -37,7 +36,9 @@ func handleError(c *gin.Context, op string, err error) {
 		NewErrorResponseWithCode(c, http.StatusConflict, dmnErr.Code(), errString(dmnErr.Error()))
 
 	case errors.Is(dmnErr, domain.ErrInvalidCredentials),
-		pkgauth.IsAny(dmnErr):
+		errors.Is(dmnErr, domain.ErrInvalidToken),
+		errors.Is(dmnErr, domain.ErrTokenRevoked),
+		errors.Is(dmnErr, domain.ErrExpiredToken):
 		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusUnauthorized, dmnErr.Code(), errString(dmnErr.Error()))
 
@@ -61,7 +62,7 @@ func handleError(c *gin.Context, op string, err error) {
 
 	default:
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(dmnErr))
-		NewErrorResponseWithCode(c, http.StatusInternalServerError, "INTERNAL", "internal server error")
+		NewErrorResponseWithCode(c, http.StatusInternalServerError, Internal, "internal server error")
 	}
 }
 
