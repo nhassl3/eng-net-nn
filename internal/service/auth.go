@@ -71,15 +71,15 @@ func (s *AuthService) CreateUser(ctx context.Context, input *domain.CreateUserIn
 	return user, tokenPair, nil
 }
 
-func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, error) {
+func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, *domain.TokenPair, error) {
 	user, storedHash, err := s.repo.GetUserForLogin(ctx, req)
 	if err != nil {
-		return nil, domain.ErrInvalidCredentials
+		return nil, nil, domain.ErrInvalidCredentials
 	}
 
 	ok, err := hash.VerifyPassword(req.Password, storedHash)
 	if err != nil || !ok {
-		return nil, domain.ErrInvalidCredentials
+		return nil, nil, domain.ErrInvalidCredentials
 	}
 
 	isAdmin, err := s.adminRepo.IsAdmin(ctx, user.UUID)
@@ -99,7 +99,7 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 
 	_ = s.redisRepo.SetProfile(ctx, user)
 
-	return user, nil
+	return user, tokenPair, nil
 }
 
 func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*domain.TokenPair, error) {
@@ -116,13 +116,23 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 	return &domain.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ExpiresIn:    s.accessMaker.GetTTL(),
 	}, nil
 }
 
 func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
-		return nil, err
+		switch {
+		case errors.Is(err, auth.ErrInvalidToken):
+			return nil, domain.ErrInvalidToken
+		case errors.Is(err, auth.ErrExpiredToken):
+			return nil, domain.ErrExpiredToken
+		case errors.Is(err, auth.ErrTokenRevoked):
+			return nil, domain.ErrTokenRevoked
+		default:
+			return nil, fmt.Errorf("auth_service.ParseToken: %w", err)
+		}
 	}
 
 	user, err := s.GetMe(ctx, payload.UID)
@@ -151,14 +161,25 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	return s.GenerateToken(ctx, user)
 }
 
-func (s *AuthService) Logout(ctx context.Context, token string) error {
-	payload, err := s.accessMaker.VerifyToken(token)
+func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken string) error {
+	payload, err := s.accessMaker.VerifyToken(accessToken)
 	if err != nil {
 		return fmt.Errorf("auth_service.Logout: %w", err)
 	}
 
 	if err := s.blacklist.Blacklist(ctx, payload.JTI, payload.ExpiredAt); err != nil {
 		return fmt.Errorf("auth_service.Logout: blacklist: %w", err)
+	}
+
+	if refreshToken != "" {
+		payloadRefresh, err := s.refreshMaker.VerifyToken(refreshToken)
+		if err != nil {
+			return fmt.Errorf("auth_service.Logout: payload refresh: %w", err)
+		}
+
+		if err := s.blacklist.Blacklist(ctx, payloadRefresh.JTI, payloadRefresh.ExpiredAt); err != nil {
+			return fmt.Errorf("auth_serivce.Logout: blacklist refresh: %w", err)
+		}
 	}
 
 	return nil
