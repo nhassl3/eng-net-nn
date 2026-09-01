@@ -1,6 +1,6 @@
 env: "prod"
 allow_origins:
-  - 
+  - https://eng-net-nn-frontend.vercel.app
 http_server:
   address: "localhost:8000"
   timeout: 5s
@@ -23,6 +23,12 @@ redis:
 token:
   access_ttl: 15m
   refresh_ttl: 168h
+  cookie:
+    name: "refresh_token"
+    domain: "domain-api.com"
+    path: "/"
+    secure: true
+    same_site: "none"
 smtp:
   host: "smtp.ya.ru"
   port: 465
