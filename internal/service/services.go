@@ -15,11 +15,11 @@ import (
 // Authorization service (create/login user, token lifecycle)
 type Authorization interface {
 	CreateUser(ctx context.Context, user *domain.CreateUserInput) (*domain.User, *domain.TokenPair, error)
-	SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, error)
+	SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, *domain.TokenPair, error)
 	GenerateToken(ctx context.Context, user *domain.User) (*domain.TokenPair, error)
 	ParseToken(ctx context.Context, token string) (*domain.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error)
-	Logout(ctx context.Context, token string) error
+	Logout(ctx context.Context, accessToken, refreshToken string) error
 	GetMe(ctx context.Context, token string) (*domain.User, error)
 }
 
