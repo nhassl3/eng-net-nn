@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/nhassl3/IpBuild-backend/internal/config"
 	"github.com/nhassl3/IpBuild-backend/internal/service"
 	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
 	valid "github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/validator"
@@ -17,13 +18,15 @@ type Handler struct {
 	services   *service.Service
 	logger     logger.Logger
 	middleware *middleware.AuthInterceptor
+	tokenCfg   *config.Token
 }
 
-func NewHandler(services *service.Service, logger logger.Logger) *Handler {
+func NewHandler(services *service.Service, logger logger.Logger, tokenCfg *config.Token) *Handler {
 	return &Handler{
 		services:   services,
 		logger:     logger,
 		middleware: middleware.NewAuthInterceptor(services.Authorization),
+		tokenCfg:   tokenCfg,
 	}
 }
 
@@ -44,11 +47,26 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.Use(middleware.RequestID())       // assigns/propagates X-Request-ID
 	router.Use(middleware.Logging(h.logger)) // structured access log + request-scoped logger in ctx
 	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
+	// One list for both CORS and the cross-site guard, so an origin can never
+	// be allowed by one and rejected by the other.
+	origins := append(append([]string{}, allowOrigins...), "http://localhost:3000")
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     append(allowOrigins, "http://localhost:3000"),
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders:     []string{"*"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowOrigins: origins,
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		// Заголовки перечислены не поимённо, а  "*": при AllowCredentials: true
+		// браузер считает "*" в Access-Control-Allow-Headers литеральным именем
+		// заголовка, а не подстановкой, и режет preflight с Authorization
+		// и X-Requested-With.
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+			middleware.RequestIDHeader,
+		},
+		ExposeHeaders:    []string{"Content-Length", middleware.RequestIDHeader},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	})) // CORS Policy
@@ -60,16 +78,19 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 		}
 	}
 
-	auth := router.Group("/auth")
+	// The refresh cookie is SameSite=None in production, so every endpoint that
+	// acts on it needs CSRF protection: an origin allowlist on the group, plus
+	// a preflight-forcing header on /refresh, which authenticates by cookie alone.
+	auth := router.Group("/auth", middleware.CrossSiteGuard(origins))
 	{
 		auth.POST("/signup", h.signUp)
 		auth.POST("/login", h.signIn)
-		auth.POST("/refresh", h.refresh)
+		auth.POST("/refresh", middleware.RequireRequestedWith, h.refresh)
 	}
 
 	api := router.Group("/api")
 	{
-		api.POST("/logout", h.middleware.UserIdentity, h.logout)
+		api.POST("/logout", middleware.CrossSiteGuard(origins), h.middleware.UserIdentity, h.logout)
 		api.GET("/me", h.middleware.UserIdentity, h.me)
 
 		vacancies := api.Group("/vacancies")

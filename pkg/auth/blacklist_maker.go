@@ -42,3 +42,7 @@ func (m *BlacklistedTokenManager) VerifyToken(token string) (*Payload, error) {
 
 	return payload, nil
 }
+
+func (m *BlacklistedTokenManager) GetTTL() int {
+	return m.inner.GetTTL()
+}

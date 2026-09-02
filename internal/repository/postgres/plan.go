@@ -73,7 +73,6 @@ func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string)
 }
 
 // GetAllPlans returns plans
-// TODO: set pages
 func (r *PlanRepo) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
 	allUsersPlans, err := r.db.GetAllPlans(ctx, db.GetAllPlansParams{
 		Limit:  100,

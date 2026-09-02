@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -33,6 +34,11 @@ func NewPASETOMaker(keyHex string, ttl time.Duration) (*PASETOMaker, error) {
 
 func (p *PASETOMaker) CreateToken(username, uid, role string) (string, error) {
 	return p.createTokenWithJTI(username, uid, role, uuid.New().String(), time.Now())
+}
+
+// GetTTL returns TTL for token in seconds
+func (p *PASETOMaker) GetTTL() int {
+	return int(p.ttl.Seconds())
 }
 
 func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti string, startTime time.Time) (string, error) {
@@ -74,7 +80,13 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 
 	token, err := parser.ParseV4Local(p.key, tokenStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("paseto: parse token: %w", err)
+		// NotExpired — единственное правило парсера, поэтому RuleError означает
+		// именно истёкший токен; всё остальное (ключ, подпись, формат) — битый.
+		// Без этого различия транспорт не может ответить 401 вместо 500.
+		if errors.Is(err, paseto.RuleError{}) {
+			return nil, ErrExpiredToken
+		}
+		return nil, ErrInvalidToken
 	}
 
 	jti, err := token.GetJti()
@@ -104,7 +116,7 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 
 	expiredAt, err := token.GetExpiration()
 	if err != nil {
-		return nil, ErrInvalidToken
+		return nil, ErrExpiredToken
 	}
 
 	return &Payload{

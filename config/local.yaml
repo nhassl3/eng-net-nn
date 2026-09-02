@@ -25,6 +25,12 @@ redis:
 token:
   access_ttl: 15m
   refresh_ttl: 168h
+  cookie:
+    name: "refresh_token"
+    domain: ""
+    path: "/"
+    secure: false
+    same_site: "lax"
 smtp:
   host: "smtp.yandex.ru"
   port: 587

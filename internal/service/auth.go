@@ -71,15 +71,15 @@ func (s *AuthService) CreateUser(ctx context.Context, input *domain.CreateUserIn
 	return user, tokenPair, nil
 }
 
-func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, error) {
+func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*domain.User, *domain.TokenPair, error) {
 	user, storedHash, err := s.repo.GetUserForLogin(ctx, req)
 	if err != nil {
-		return nil, domain.ErrInvalidCredentials
+		return nil, nil, domain.ErrInvalidCredentials
 	}
 
 	ok, err := hash.VerifyPassword(req.Password, storedHash)
 	if err != nil || !ok {
-		return nil, domain.ErrInvalidCredentials
+		return nil, nil, domain.ErrInvalidCredentials
 	}
 
 	isAdmin, err := s.adminRepo.IsAdmin(ctx, user.UUID)
@@ -99,7 +99,7 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 
 	_ = s.redisRepo.SetProfile(ctx, user)
 
-	return user, nil
+	return user, tokenPair, nil
 }
 
 func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*domain.TokenPair, error) {
@@ -116,13 +116,14 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 	return &domain.TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ExpiresIn:    s.accessMaker.GetTTL(),
 	}, nil
 }
 
 func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
-		return nil, err
+		return nil, mapTokenError("auth_service.ParseToken", err)
 	}
 
 	user, err := s.GetMe(ctx, payload.UID)
@@ -136,7 +137,7 @@ func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.Use
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
 	payload, err := s.refreshMaker.VerifyToken(refreshToken)
 	if err != nil {
-		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
+		return nil, mapTokenError("auth_service.RefreshToken", err)
 	}
 
 	user, err := s.GetMe(ctx, payload.UID)
@@ -151,14 +152,25 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 	return s.GenerateToken(ctx, user)
 }
 
-func (s *AuthService) Logout(ctx context.Context, token string) error {
-	payload, err := s.accessMaker.VerifyToken(token)
+func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken string) error {
+	payload, err := s.accessMaker.VerifyToken(accessToken)
 	if err != nil {
-		return fmt.Errorf("auth_service.Logout: %w", err)
+		return mapTokenError("auth_service.Logout", err)
 	}
 
 	if err := s.blacklist.Blacklist(ctx, payload.JTI, payload.ExpiredAt); err != nil {
 		return fmt.Errorf("auth_service.Logout: blacklist: %w", err)
+	}
+
+	if refreshToken != "" {
+		payloadRefresh, err := s.refreshMaker.VerifyToken(refreshToken)
+		if err != nil {
+			return mapTokenError("auth_service.Logout: payload refresh", err)
+		}
+
+		if err := s.blacklist.Blacklist(ctx, payloadRefresh.JTI, payloadRefresh.ExpiredAt); err != nil {
+			return fmt.Errorf("auth_serivce.Logout: blacklist refresh: %w", err)
+		}
 	}
 
 	return nil
@@ -185,6 +197,21 @@ func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, err
 		user.Role = "user"
 	}
 	return user, nil
+}
+
+// mapTokenError переводит ошибки токен-мейкера в доменные, чтобы транспорт
+// отвечал 401, а не 500: handleError понимает только *domain.DomainError.
+func mapTokenError(op string, err error) error {
+	switch {
+	case errors.Is(err, auth.ErrInvalidToken):
+		return domain.ErrInvalidToken
+	case errors.Is(err, auth.ErrExpiredToken):
+		return domain.ErrExpiredToken
+	case errors.Is(err, auth.ErrTokenRevoked):
+		return domain.ErrTokenRevoked
+	default:
+		return fmt.Errorf("%s: %w", op, err)
+	}
 }
 
 func isDuplicateError(err error) bool {

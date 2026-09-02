@@ -102,9 +102,14 @@ func (i *AuthInterceptor) GetUserIdByToken(c *gin.Context) string {
 }
 
 type errorResponse struct {
+	Code    string `json:"code,omitempty"`
 	Message string `json:"message"`
 }
 
 func newErrorResponse(c *gin.Context, statusCode int, message string) {
-	c.AbortWithStatusJSON(statusCode, errorResponse{message})
+	c.AbortWithStatusJSON(statusCode, errorResponse{Message: message})
+}
+
+func newErrorResponseWithCode(c *gin.Context, statusCode int, code, message string) {
+	c.AbortWithStatusJSON(statusCode, errorResponse{Code: code, Message: message})
 }

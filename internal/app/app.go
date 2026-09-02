@@ -114,7 +114,7 @@ func (s *Server) Run(cfg *config.Config, log logger.Logger) error {
 		log,
 	)
 
-	handler := handle.NewHandler(services, log.Named("http"))
+	handler := handle.NewHandler(services, log.Named("http"), &cfg.Token)
 
 	s.httpServer = &http.Server{
 		Addr:           cfg.HttpServer.Address,
