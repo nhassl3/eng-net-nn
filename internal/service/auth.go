@@ -83,8 +83,18 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 	}
 
 	isAdmin, err := s.adminRepo.IsAdmin(ctx, user.UUID)
-	if err == nil && isAdmin {
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth_service.SignIn: %w", err)
+	}
+	if isAdmin {
 		user.Role = "admin"
+	} else {
+		user.Role = "user"
+	}
+
+	tokenPair, err := s.GenerateToken(ctx, user)
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth_service.SignIn: generate tokens: %w", err)
 	}
 
 	_ = s.redisRepo.SetProfile(ctx, user)
@@ -159,9 +169,16 @@ func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, err
 		if err != nil {
 			return nil, fmt.Errorf("auth_service.GetMe: %w", err)
 		}
-		if errors.Is(err, domain.ErrRedisNotFound) {
-			_ = s.redisRepo.SetProfile(ctx, user)
-		}
+		_ = s.redisRepo.SetProfile(ctx, user)
+	}
+	ok, err := s.adminRepo.IsAdmin(ctx, uuid)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.GetMe: %w", err)
+	}
+	if ok {
+		user.Role = "admin"
+	} else {
+		user.Role = "user"
 	}
 	return user, nil
 }
