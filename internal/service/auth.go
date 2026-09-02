@@ -119,17 +119,18 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 	}, nil
 }
 
-func (s *AuthService) ParseToken(_ context.Context, token string) (*domain.User, error) {
+func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
 		return nil, err
 	}
 
-	return &domain.User{
-		UUID:     payload.UID,
-		Username: payload.Username,
-		Role:     payload.Role,
-	}, nil
+	user, err := s.GetMe(ctx, payload.UID)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.ParseToken: %w", err)
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
@@ -138,10 +139,13 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
 	}
 
-	user := &domain.User{
-		UUID:     payload.UID,
-		Username: payload.Username,
-		Role:     payload.Role,
+	user, err := s.GetMe(ctx, payload.UID)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
+	}
+
+	if err := s.blacklist.Blacklist(ctx, payload.JTI, payload.ExpiredAt); err != nil {
+		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
 	}
 
 	return s.GenerateToken(ctx, user)
