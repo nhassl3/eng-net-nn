@@ -53,9 +53,10 @@ type RedisServer struct {
 }
 
 type RedisTTL struct {
-	UserProfile time.Duration `yaml:"user_profile" env-default:"15m"`
-	Blacklist   time.Duration `yaml:"blacklist" env-default:"5m"`
-	AuthTimeout time.Duration `yaml:"auth_timeout" env-default:"5m"`
+	UserProfile      time.Duration `yaml:"user_profile" env-default:"1h"`
+	BlacklistAccess  time.Duration `yaml:"blacklist_access" env-default:"15m"`
+	BlacklistRefresh time.Duration `yaml:"blacklist_refresh" env-default:"168h"`
+	AuthTimeout      time.Duration `yaml:"auth_timeout" env-default:"5m"`
 }
 
 type Token struct {
@@ -102,8 +103,9 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv.SetDefault("db.sslmode", "disable")
 	yv.SetDefault("redis.address", "localhost:6380")
 	yv.SetDefault("redis.db", 0)
-	yv.SetDefault("redis.ttl.user_profile", 15*time.Minute)
-	yv.SetDefault("redis.ttl.blacklist", 5*time.Minute)
+	yv.SetDefault("redis.ttl.user_profile", 1*time.Hour)
+	yv.SetDefault("redis.ttl.blacklist_access", 15*time.Minute)
+	yv.SetDefault("redis.ttl.blacklist_refresh", 168*time.Hour)
 	yv.SetDefault("redis.ttl.auth_timeout", 5*time.Minute)
 	yv.SetDefault("token.access_ttl", 15*time.Minute)
 	yv.SetDefault("token.refresh_ttl", 168*time.Hour)
@@ -150,7 +152,8 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.RedisServer.Password = ev.GetString("REDIS_PASSWORD")
 
 	cfg.RedisServer.TTL.UserProfile = yv.GetDuration("redis.ttl.user_profile")
-	cfg.RedisServer.TTL.Blacklist = yv.GetDuration("redis.ttl.blacklist")
+	cfg.RedisServer.TTL.BlacklistAccess = yv.GetDuration("redis.ttl.blacklist_access")
+	cfg.RedisServer.TTL.BlacklistRefresh = yv.GetDuration("redis.ttl.blacklist_refresh")
 	cfg.RedisServer.TTL.AuthTimeout = yv.GetDuration("redis.ttl.auth_timeout")
 
 	cfg.Token.PasetoKeyHex = ev.GetString("PASETO_KEY")

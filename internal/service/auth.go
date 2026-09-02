@@ -83,8 +83,18 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 	}
 
 	isAdmin, err := s.adminRepo.IsAdmin(ctx, user.UUID)
-	if err == nil && isAdmin {
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth_service.SignIn: %w", err)
+	}
+	if isAdmin {
 		user.Role = "admin"
+	} else {
+		user.Role = "user"
+	}
+
+	tokenPair, err := s.GenerateToken(ctx, user)
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth_service.SignIn: generate tokens: %w", err)
 	}
 
 	_ = s.redisRepo.SetProfile(ctx, user)
@@ -109,17 +119,18 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 	}, nil
 }
 
-func (s *AuthService) ParseToken(_ context.Context, token string) (*domain.User, error) {
+func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
 	payload, err := s.accessMaker.VerifyToken(token)
 	if err != nil {
 		return nil, err
 	}
 
-	return &domain.User{
-		UUID:     payload.UID,
-		Username: payload.Username,
-		Role:     payload.Role,
-	}, nil
+	user, err := s.GetMe(ctx, payload.UID)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.ParseToken: %w", err)
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
@@ -128,10 +139,13 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
 	}
 
-	user := &domain.User{
-		UUID:     payload.UID,
-		Username: payload.Username,
-		Role:     payload.Role,
+	user, err := s.GetMe(ctx, payload.UID)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
+	}
+
+	if err := s.blacklist.Blacklist(ctx, payload.JTI, payload.ExpiredAt); err != nil {
+		return nil, fmt.Errorf("auth_service.RefreshToken: %w", err)
 	}
 
 	return s.GenerateToken(ctx, user)
@@ -159,9 +173,16 @@ func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, err
 		if err != nil {
 			return nil, fmt.Errorf("auth_service.GetMe: %w", err)
 		}
-		if errors.Is(err, domain.ErrRedisNotFound) {
-			_ = s.redisRepo.SetProfile(ctx, user)
-		}
+		_ = s.redisRepo.SetProfile(ctx, user)
+	}
+	ok, err := s.adminRepo.IsAdmin(ctx, uuid)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.GetMe: %w", err)
+	}
+	if ok {
+		user.Role = "admin"
+	} else {
+		user.Role = "user"
 	}
 	return user, nil
 }
