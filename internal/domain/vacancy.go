@@ -72,8 +72,8 @@ type Vacancies struct {
 type ApplicantsFormInput struct {
 	FullName    string `json:"fullName,omitempty"`
 	PhoneNumber string `json:"phoneNumber,omitempty"`
-	Email       string `json:"email,omitempty" validator:"required,email"`
-	City        string `json:"city,omitempty" validator:"required,city"`
+	Email       string `json:"email" validator:"required,email"`
+	City        string `json:"city" validator:"required,city"`
 	Exp         string `json:"exp,omitempty"`
 	Description string `json:"description,omitempty"`
 }
