@@ -1,0 +1,44 @@
+env: "local"
+allow_origins:
+  - http://localhost:3000
+  - http://localhost:5173
+  - http://localhost:4173
+http_server:
+  address: "0.0.0.0:8080"
+  timeout: 4s
+  idle_timeout: 60s
+db:
+  host: "postgres"
+  port: 5432
+  username: "ipbuild"
+  dbname: "unet"
+  sslmode: "disable"
+redis:
+  username: "admin"
+  address: "redis:6380"
+  db: 0
+  ttl:
+    user_profile: 1h
+    blacklist_access: 15m
+    blacklist_refresh: 168h
+    auth_timeout: 5s
+token:
+  access_ttl: 15m
+  refresh_ttl: 168h
+  cookie:
+    name: "refresh_token"
+    domain: ""
+    path: "/"
+    secure: false
+    same_site: "lax"
+smtp:
+  host: "smtp.yandex.ru"
+  port: 587
+minio:
+  endpoint: "minio:9000"
+  bucket: "unet-resume"
+  use_ssl: false
+log:
+  level: "debug"
+  add_caller: true
+  stacktrace: "error"
