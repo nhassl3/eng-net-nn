@@ -1,0 +1,24 @@
+FROM golang:1.26-alpine AS builder
+
+ENV GOTOOLCHAIN=auto
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /app/bin/ipbuild ./cmd/api
+
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+COPY --from=builder /app/bin/ipbuild ./ipbuild
+COPY config ./config
+COPY migrations ./migrations
+
+EXPOSE 8080
+
+ENTRYPOINT ["./ipbuild"]
