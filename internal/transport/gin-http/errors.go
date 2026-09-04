@@ -61,6 +61,10 @@ func handleError(c *gin.Context, op string, err error) {
 		log.Warn("request rejected: invalid content type", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusUnsupportedMediaType, dmnErr.Code(), errString(dmnErr.Error()))
 
+	case errors.Is(dmnErr, domain.ErrInvalidParam):
+		log.Warn("request rejected: invalid parameter", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusBadRequest, dmnErr.Code(), errString(dmnErr.Error()))
+
 	default:
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusInternalServerError, Internal, "internal server error")
