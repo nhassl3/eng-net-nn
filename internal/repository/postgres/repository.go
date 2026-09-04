@@ -27,11 +27,11 @@ type Vacancies interface {
 	DeleteVacancy(ctx context.Context, vacancyId string) error
 
 	ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error)
-	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
+	GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error)
 
 	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
-	UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
-	RemoveJd(ctx context.Context, jdId int32) error
+	UpdateJd(ctx context.Context, jdId int64, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
+	RemoveJd(ctx context.Context, jdId int64) error
 
 	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
 	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)

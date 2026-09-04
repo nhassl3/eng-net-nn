@@ -91,7 +91,7 @@ func (s *VacanciesService) ListJd(ctx context.Context, limit, offset int32) (*do
 	return jd, nil
 }
 
-func (s *VacanciesService) GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error) {
+func (s *VacanciesService) GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error) {
 	jd, err := s.repo.GetJd(ctx, jdId)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.GetJd: %w", err)
@@ -107,7 +107,7 @@ func (s *VacanciesService) CreateJd(ctx context.Context, params *domain.CreateJo
 	return jd, nil
 }
 
-func (s *VacanciesService) UpdateJd(ctx context.Context, jdId int32, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
+func (s *VacanciesService) UpdateJd(ctx context.Context, jdId int64, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
 	jd, err := s.repo.UpdateJd(ctx, jdId, updJd)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.UpdateJd: %w", err)
@@ -115,7 +115,7 @@ func (s *VacanciesService) UpdateJd(ctx context.Context, jdId int32, updJd *doma
 	return jd, nil
 }
 
-func (s *VacanciesService) DeleteJd(ctx context.Context, jdId int32) error {
+func (s *VacanciesService) DeleteJd(ctx context.Context, jdId int64) error {
 	if err := s.repo.RemoveJd(ctx, jdId); err != nil {
 		return fmt.Errorf("vacancies_service.DeleteJd: %w", err)
 	}

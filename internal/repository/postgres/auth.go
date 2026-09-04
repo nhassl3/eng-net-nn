@@ -21,7 +21,7 @@ func NewAuthRepo(db *db.Store) *AuthRepo {
 
 func (r *AuthRepo) CreateUser(ctx context.Context, params domain.CreateUserInput) (*domain.User, error) {
 	user, err := r.db.CreateUser(ctx, db.CreateUserParams{
-		Username:       stringToNullable(params.Username),
+		Username:       params.Username,
 		FullName:       stringToNullable(params.FullName),
 		Email:          params.Email,
 		HashedPassword: params.Password,
@@ -61,7 +61,7 @@ func mapUser(user db.User) domain.User {
 	return domain.User{
 		UUID:      uuid2String(user.ID),
 		Role:      user.Role.String,
-		Username:  user.Username.String,
+		Username:  user.Username,
 		FullName:  user.FullName.String,
 		Email:     user.Email,
 		CreatedAt: pgTimeTZ(user.CreatedAt, time.UTC),

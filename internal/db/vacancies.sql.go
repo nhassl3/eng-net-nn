@@ -229,6 +229,7 @@ const getVacancy = `-- name: GetVacancy :one
 SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd WHERE
                             ($1::uuid IS NULL OR id=$1::uuid)
                             AND ($2::varchar IS NULL OR name=$2::varchar)
+                            AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL) LIMIT 1
 `
 
 type GetVacancyParams struct {
@@ -268,7 +269,8 @@ func (q *Queries) RemoveJobDirection(ctx context.Context, id int64) error {
 const removeVacancy = `-- name: RemoveVacancy :exec
 DELETE FROM vacancies WHERE
                           ($1::uuid IS NULL OR id=$1::uuid)
-                        AND($2::varchar IS NULL OR name=$2::varchar)
+                        AND ($2::varchar IS NULL OR name=$2::varchar)
+                        AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL)
 `
 
 type RemoveVacancyParams struct {
@@ -351,9 +353,12 @@ func (q *Queries) UpdateJobDirection(ctx context.Context, arg UpdateJobDirection
 }
 
 const updateVacancy = `-- name: UpdateVacancy :one
-UPDATE vacancies SET jd=$1, name=$6::varchar, description=$2, required_exp=$3, pay_day=$4, skills=$5, updated_at=now()  WHERE
-    ($7::uuid IS NULL OR id=$7::uuid)
-                                                                                                                 AND($8::varchar IS NULL OR name=$8::varchar) RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
+UPDATE vacancies SET jd=$1, name=$6::varchar, description=$2, required_exp=$3, pay_day=$4, skills=$5, updated_at=now()
+                 WHERE
+                    ($7::uuid IS NULL OR id=$7::uuid)
+                    AND ($8::varchar IS NULL OR name=$8::varchar)
+                    AND ($7::uuid IS NOT NULL OR $8::varchar IS NOT NULL)
+                    RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
 `
 
 type UpdateVacancyParams struct {

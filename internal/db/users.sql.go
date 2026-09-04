@@ -16,7 +16,7 @@ INSERT INTO users (username, full_name, email, hashed_password) VALUES ($1, $2, 
 `
 
 type CreateUserParams struct {
-	Username       pgtype.Text `json:"username"`
+	Username       string      `json:"username"`
 	FullName       pgtype.Text `json:"full_name"`
 	Email          string      `json:"email"`
 	HashedPassword string      `json:"hashed_password"`
