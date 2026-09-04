@@ -65,8 +65,12 @@ func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.Create
 }
 
 func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error {
+	uuid := uuidPtr2Nullable(vacancyId)
+	if !uuid.Valid {
+		return domain.ErrInvalidParam
+	}
 	if updVacancy == nil {
-		return fmt.Errorf("vacancies_repo.Update: vacancies input is nil")
+		return domain.ErrEmptyData
 	}
 	return r.db.ExecTx(ctx, func(q *db.Queries) error {
 		var (
@@ -75,14 +79,14 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 		)
 
 		vacancy, fnErr := q.GetVacancy(ctx, db.GetVacancyParams{
-			ID: uuidPtr2Nullable(vacancyId),
+			ID: uuid,
 		})
 		if fnErr != nil {
 			return fmt.Errorf("vacancies_repo.Update: failed to load vacancy id: %w", fnErr)
 		}
 
 		updateVacancyParams = db.UpdateVacancyParams{
-			ID:          uuidPtr2Nullable(vacancyId),
+			ID:          uuid,
 			Jd:          vacancy.Jd,
 			NewName:     vacancy.Name.String,
 			Description: vacancy.Description,
@@ -118,8 +122,12 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 }
 
 func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) error {
+	uuid := uuidPtr2Nullable(vacancyId)
+	if !uuid.Valid {
+		return domain.ErrInvalidParam
+	}
 	return r.db.RemoveVacancy(ctx, db.RemoveVacancyParams{
-		ID: uuidPtr2Nullable(vacancyId),
+		ID: uuid,
 	})
 }
 
@@ -137,8 +145,8 @@ func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domai
 	return mapJobDirections(jds), nil
 }
 
-func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error) {
-	jd, err := r.db.GetJD(ctx, int64(jdId))
+func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error) {
+	jd, err := r.db.GetJD(ctx, jdId)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetJd: failed to load job direction: %w", err)
 	}
@@ -161,9 +169,9 @@ func (r *VacanciesRepo) CreateJd(ctx context.Context, params *domain.CreateJobDi
 	return new(mapJobDirection(jd)), nil
 }
 
-func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
+func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int64, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
 	jd, err := r.db.UpdateJobDirection(ctx, db.UpdateJobDirectionParams{
-		ID:          int64(jdId),
+		ID:          jdId,
 		Name:        stringPtrToNullable(params.Name),
 		Tags:        params.Tags,
 		Description: stringPtrToNullable(params.Description),
@@ -174,8 +182,8 @@ func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int32, params *domain
 	return new(mapJobDirection(jd)), nil
 }
 
-func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int32) error {
-	if err := r.db.RemoveJobDirection(ctx, int64(jdId)); err != nil {
+func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int64) error {
+	if err := r.db.RemoveJobDirection(ctx, jdId); err != nil {
 		// 23503 — foreign key violation: vacancies still reference this direction.
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 			if pgErr.Code == "23503" {

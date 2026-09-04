@@ -24,6 +24,11 @@ func (h *Handler) getAllVacancies(c *gin.Context) {
 
 func (h *Handler) getVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "getting not exists vacancy")
+		return
+	}
+
 	vacancy, err := h.services.Vacancies.GetVacancy(c.Request.Context(), id)
 	if err != nil {
 		handleError(c, "getVacancy", err)
@@ -49,6 +54,10 @@ func (h *Handler) createVacancy(c *gin.Context) {
 
 func (h *Handler) updateVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "updating not exists vacancy")
+		return
+	}
 
 	var input domain.UpdatedVacancyInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -66,6 +75,10 @@ func (h *Handler) updateVacancy(c *gin.Context) {
 
 func (h *Handler) deleteVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "deleting not exists vacancy")
+		return
+	}
 
 	if err := h.services.Vacancies.Delete(c.Request.Context(), id); err != nil {
 		handleError(c, "deleteVacancy", err)
@@ -85,8 +98,9 @@ func (h *Handler) listJd(c *gin.Context) {
 }
 
 func (h *Handler) getJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "getJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "getJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "getting not exists vacancy job direction")
 		return
 	}
 
@@ -114,8 +128,9 @@ func (h *Handler) createJd(c *gin.Context) {
 }
 
 func (h *Handler) updateJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "updateJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "updateJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "updating not exists vacancy job direction")
 		return
 	}
 
@@ -134,8 +149,9 @@ func (h *Handler) updateJd(c *gin.Context) {
 }
 
 func (h *Handler) deleteJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "deleteJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "deleteJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "deleting not exists vacancy job direction")
 		return
 	}
 
