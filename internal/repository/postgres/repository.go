@@ -40,7 +40,8 @@ type Vacancies interface {
 
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error)
-	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
+	GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error)
+	GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error)
 	GetDirection(ctx context.Context, directionId int32) (string, error)
 	CreateLinkRequest(ctx context.Context, userId, planId string) error
 	GetAllPlans(ctx context.Context) (*domain.Plans, error)

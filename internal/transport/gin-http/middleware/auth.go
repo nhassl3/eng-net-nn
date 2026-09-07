@@ -60,6 +60,36 @@ func (i *AuthInterceptor) UserIdentity(c *gin.Context) {
 	c.Next()
 }
 
+func (i *AuthInterceptor) UserIdentityOmitempty(c *gin.Context) {
+	header := c.GetHeader(authorizationHeader)
+	if header == "" {
+		c.Next()
+		return
+	}
+
+	parts := strings.SplitN(header, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		c.Next()
+		return
+	}
+
+	tokenStr := parts[1]
+	user, err := i.s.ParseToken(c.Request.Context(), tokenStr)
+	if err != nil {
+		c.Next()
+		return
+	}
+	if user == nil {
+		c.Next()
+		return
+	}
+
+	c.Set(UserIdCtx, user.UUID)
+	c.Set(roleCtx, user.Role)
+	c.Set(TokenCtx, tokenStr)
+	c.Next()
+}
+
 func (i *AuthInterceptor) AdminIdentity(c *gin.Context) {
 	role, exists := c.Get(roleCtx)
 	if !exists {
@@ -76,29 +106,6 @@ func (i *AuthInterceptor) AdminIdentity(c *gin.Context) {
 	}
 
 	c.Next()
-}
-
-func (i *AuthInterceptor) GetUserIdByToken(c *gin.Context) string {
-	header := c.GetHeader(authorizationHeader)
-	if header == "" {
-		return ""
-	}
-
-	parts := strings.SplitN(header, " ", 2)
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		return ""
-	}
-
-	tokenStr := parts[1]
-	user, err := i.s.ParseToken(c.Request.Context(), tokenStr)
-	if err != nil {
-		return ""
-	}
-	if user == nil {
-		return ""
-	}
-
-	return user.UUID
 }
 
 type errorResponse struct {

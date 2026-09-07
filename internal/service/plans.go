@@ -74,8 +74,16 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 	return result, nil
 }
 
-func (s *PlansService) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
-	result, err := s.repo.GetPlan(ctx, planId)
+func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
+	result, err := s.repo.GetUserPlan(ctx, planUID, userUID)
+	if err != nil {
+		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
+	}
+	return result, nil
+}
+
+func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
+	result, err := s.repo.GetPlan(ctx, planUID)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}

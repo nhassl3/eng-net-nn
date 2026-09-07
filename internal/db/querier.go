@@ -26,6 +26,7 @@ type Querier interface {
 	GetRespondVacancy(ctx context.Context, id uuid.UUID) (UserRespond, error)
 	GetResponseFromRequest(ctx context.Context, planID uuid.UUID) (LinkUserWithPlan, error)
 	GetUser(ctx context.Context, arg GetUserParams) (User, error)
+	GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUserPlanRow, error)
 	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error)
 	GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error)
 	IsAdmin(ctx context.Context, dollar_1 uuid.UUID) (bool, error)

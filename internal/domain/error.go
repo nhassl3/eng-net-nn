@@ -24,6 +24,7 @@ const (
 	TokenRevoked             = "TOKEN_REVOKED"
 	InvalidParam             = "INVALID_PARAM"
 	EmptyData                = "EMPTY_DATA"
+	Unauthorized             = "UNAUTHORIZED"
 )
 
 type DomainError struct {
@@ -67,4 +68,5 @@ var (
 	ErrTokenRevoked              = newError(TokenRevoked, "token revoked")
 	ErrInvalidParam              = newError(InvalidParam, "invalid param")
 	ErrEmptyData                 = newError(EmptyData, "empty data")
+	ErrUnauthorized              = newError(Unauthorized, "unauthorized")
 )

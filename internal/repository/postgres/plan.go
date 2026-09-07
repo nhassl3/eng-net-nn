@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
@@ -33,27 +32,37 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 	return new(mapPlan(plan)), nil
 }
 
-func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
-	userPlan, err := r.db.GetResponseFromRequest(ctx, string2UUID(planId))
-	if err != nil {
-		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
+func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
+	userId := stringToNullable(userUID)
+	if userId.Valid == false {
+		return nil, domain.ErrInvalidToken // TODO: how do else?
 	}
 
-	user, err := r.db.GetUser(ctx, db.GetUserParams{
-		ID: pgtype.UUID{Bytes: userPlan.UserID, Valid: true},
+	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
+		UserID: userId,
+		PlanID: string2UUID(planUID),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
-	plan, err := r.db.GetPlan(ctx, string2UUID(planId))
+	return &domain.UserPlan{
+		User: new(mapUser(userPlan.User)),
+		Plan: new(mapPlan(userPlan.Plan)),
+	}, nil
+}
+
+func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
+	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
+		PlanID: string2UUID(planUID),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
 	return &domain.UserPlan{
-		User: new(mapUser(user)),
-		Plan: new(mapPlan(plan)),
+		User: new(mapUser(userPlan.User)),
+		Plan: new(mapPlan(userPlan.Plan)),
 	}, nil
 }
 
