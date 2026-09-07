@@ -39,7 +39,8 @@ func handleError(c *gin.Context, op string, err error) {
 	case errors.Is(dmnErr, domain.ErrInvalidCredentials),
 		errors.Is(dmnErr, domain.ErrInvalidToken),
 		errors.Is(dmnErr, domain.ErrTokenRevoked),
-		errors.Is(dmnErr, domain.ErrExpiredToken):
+		errors.Is(dmnErr, domain.ErrExpiredToken),
+		errors.Is(dmnErr, domain.ErrUnauthorized):
 		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusUnauthorized, dmnErr.Code(), errString(dmnErr.Error()))
 

@@ -77,6 +77,9 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
 	result, err := s.repo.GetUserPlan(ctx, planUID, userUID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrPlanRequestNotExists
+		}
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}
 	return result, nil
@@ -85,6 +88,9 @@ func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string)
 func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
 	result, err := s.repo.GetPlan(ctx, planUID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrPlanRequestNotExists
+		}
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}
 	return result, nil
