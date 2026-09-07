@@ -99,8 +99,3 @@ type CreateVacancyInput struct {
 	PayDay      *float64 `json:"pay_day,omitempty"`
 	Skills      []string `json:"skills,omitempty"`
 }
-
-type GetAllInput struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
