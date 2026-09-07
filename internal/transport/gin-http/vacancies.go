@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
@@ -165,11 +166,17 @@ func (h *Handler) deleteJd(c *gin.Context) {
 // respond a handler which creates email for owner with next
 func (h *Handler) respond(c *gin.Context) {
 	var input struct {
-		VacancyID string `json:"vacancy_id" validator:"required"`
+		VacancyID string `json:"vacancy_id" binding:"required"`
 		domain.ApplicantsFormInput
 	}
 	if err := json.Unmarshal([]byte(c.PostForm("json")), &input); err != nil {
 		logger.From(c.Request.Context()).Warn("respond: decode json field", logger.Err(err))
+		NewErrorResponse(c, http.StatusBadRequest, "invalid json body")
+		return
+	}
+
+	if err := binding.Validator.ValidateStruct(&input); err != nil {
+		logger.From(c.Request.Context()).Warn("respond: validate json field", logger.Err(err))
 		NewErrorResponse(c, http.StatusBadRequest, "invalid json body")
 		return
 	}
