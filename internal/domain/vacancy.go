@@ -37,15 +37,15 @@ type VacanciesWithJd struct {
 }
 
 type CreateJobDirectionInput struct {
-	Name        string   `json:"name"`
+	Name        string   `json:"name" binding:"required"`
 	Tags        []string `json:"tags"`
-	Description string   `json:"description"`
+	Description string   `json:"description" binding:"required"`
 }
 
 type UpdateJobDirectionInput struct {
-	Name        *string  `json:"name,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	Description *string  `json:"description,omitempty"`
+	Name        *string  `json:"name" binding:"omitempty"`
+	Tags        []string `json:"tags" binding:"omitempty"`
+	Description *string  `json:"description" binding:"omitempty"`
 }
 
 type RespondVacancies struct {
@@ -70,12 +70,12 @@ type Vacancies struct {
 }
 
 type ApplicantsFormInput struct {
-	FullName    string `json:"fullName,omitempty"`
-	PhoneNumber string `json:"phoneNumber,omitempty"`
-	Email       string `json:"email" validator:"required,email"`
-	City        string `json:"city" validator:"required,city"`
-	Exp         string `json:"exp,omitempty"`
-	Description string `json:"description,omitempty"`
+	FullName    string `json:"fullName" binding:"omitempty"`
+	PhoneNumber string `json:"phoneNumber" binding:"omitempty"`
+	Email       string `json:"email" binding:"required,email"`
+	City        string `json:"city" binding:"required,city"`
+	Exp         string `json:"exp" binding:"omitempty"`
+	Description string `json:"description" binding:"omitempty"`
 }
 
 type FileUploadInput struct {
@@ -83,19 +83,19 @@ type FileUploadInput struct {
 }
 
 type UpdatedVacancyInput struct {
-	Jd          *int32   `json:"jd,omitempty"`
-	Name        *string  `json:"name,omitempty"`
-	Description *string  `json:"description,omitempty"`
-	RequiredExp *string  `json:"required_exp,omitempty"`
-	PayDay      *float64 `json:"pay_day,omitempty"`
-	Skills      []string `json:"skills,omitempty"`
+	Jd          *int32   `json:"jd" binding:"omitempty"`
+	Name        *string  `json:"name" binding:"omitempty"`
+	Description *string  `json:"description" binding:"omitempty"`
+	RequiredExp *string  `json:"required_exp" binding:"omitempty"`
+	PayDay      *float64 `json:"pay_day" binding:"omitempty"`
+	Skills      []string `json:"skills" binding:"omitempty"`
 }
 
 type CreateVacancyInput struct {
-	Jd          int32    `json:"jd,omitempty"`
-	Name        string   `json:"name,omitempty"`
-	Description string   `json:"description,omitempty"`
-	RequiredExp *string  `json:"required_exp,omitempty"`
-	PayDay      *float64 `json:"pay_day,omitempty"`
-	Skills      []string `json:"skills,omitempty"`
+	Jd          int32    `json:"jd" binding:"omitempty"`
+	Name        string   `json:"name" binding:"omitempty"`
+	Description string   `json:"description" binding:"omitempty"`
+	RequiredExp *string  `json:"required_exp" binding:"omitempty"`
+	PayDay      *float64 `json:"pay_day" binding:"omitempty"`
+	Skills      []string `json:"skills" binding:"omitempty"`
 }

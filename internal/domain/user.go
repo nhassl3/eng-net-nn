@@ -27,25 +27,25 @@ func (u *User) UnmarshalBinary(data []byte) error {
 }
 
 type CreateUserInput struct {
-	Username string `json:"username" validator:"required,min=3,max=50"`
-	FullName string `json:"full_name" validator:"required,min=2,max=100"`
-	Email    string `json:"email" validator:"required,email"`
-	Password string `json:"password" validator:"required,min=8"`
+	Username string `json:"username" binding:"required,min=3,max=50"`
+	FullName string `json:"full_name" binding:"required,min=2,max=100"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
 }
 
 type SignInInput struct {
-	Username string `json:"username" validator:"omitempty"`
-	Email    string `json:"email" validator:"omitempty,email"`
-	ID       string `json:"id" validator:"omitempty,min=1,max=100"`
-	Password string `json:"password" validator:"required"`
+	Username string `json:"username" binding:"omitempty,min=3,max=50"`
+	Email    string `json:"email" binding:"omitempty,email"`
+	ID       string `json:"id" binding:"omitempty"`
+	Password string `json:"password" binding:"required"`
 }
 
 type GetMeParams struct {
-	UUID     *string `json:"uuid"`
-	Email    *string `json:"email"`
-	Username *string `json:"username"`
+	UUID     *string `json:"uuid" binding:"omitempty"`
+	Email    *string `json:"email" binding:"omitempty,email"`
+	Username *string `json:"username" binding:"omitempty,min=3,max=50"`
 }
 
 type RefreshInput struct {
-	RefreshToken string `json:"refresh_token" validator:"required"`
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
