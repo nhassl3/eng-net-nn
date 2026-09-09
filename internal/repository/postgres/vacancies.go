@@ -196,6 +196,11 @@ func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int64) error {
 }
 
 func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error) {
+	vacancyID, err := string2UUID(vacancyId)
+	if err != nil {
+		return "", domain.ErrVacancyNotExists
+	}
+
 	userRespondId, err := r.db.RespondToVacancy(ctx, db.RespondToVacancyParams{
 		FullName:    applicantsForm.FullName,
 		Email:       applicantsForm.Email,
@@ -204,7 +209,7 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 		Exp:         stringToNullable(applicantsForm.Exp),
 		Description: stringToNullable(applicantsForm.Description),
 		Resume:      stringToNullable(objectName),
-		VacancyID:   string2UUID(vacancyId),
+		VacancyID:   vacancyID,
 	})
 	if err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
@@ -229,7 +234,12 @@ func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.Respon
 }
 
 func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
-	respondVacancy, err := r.db.GetRespondVacancy(ctx, string2UUID(respondVacancyId))
+	id, err := string2UUID(respondVacancyId)
+	if err != nil {
+		return nil, domain.ErrRespondVacancyNotExists
+	}
+
+	respondVacancy, err := r.db.GetRespondVacancy(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
 	}
