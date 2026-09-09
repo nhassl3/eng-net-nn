@@ -34,6 +34,10 @@ func (r *AuthRepo) CreateUser(ctx context.Context, params domain.CreateUserInput
 
 // GetUserForLogin fetches the user and their stored password hash for login verification.
 func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) (*domain.User, string, error) {
+	if in.ID == "" && in.Username == "" && in.Email == "" {
+		return nil, "", fmt.Errorf("auth_repo.GetUserForLogin: %w", domain.ErrInvalidParam)
+	}
+
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		Username: stringToNullable(in.Username),
 		Email:    stringToNullable(in.Email),
@@ -46,6 +50,12 @@ func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) 
 }
 
 func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domain.User, error) {
+	if (params.UUID == nil || *params.UUID == "") &&
+		(params.Email == nil || *params.Email == "") &&
+		(params.Username == nil || *params.Username == "") {
+		return nil, fmt.Errorf("auth_repo.GetMe: %w", domain.ErrInvalidParam)
+	}
+
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		ID:       nUUIDPtr2Nullable(params.UUID),
 		Email:    stringPtrToNullable(params.Email),
