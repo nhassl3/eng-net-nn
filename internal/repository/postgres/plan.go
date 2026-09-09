@@ -35,12 +35,17 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
 	userId := stringToNullable(userUID)
 	if userId.Valid == false {
-		return nil, domain.ErrInvalidToken // TODO: how do else?
+		return nil, domain.ErrInvalidToken
+	}
+
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrPlanRequestNotExists
 	}
 
 	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
 		UserID: userId,
-		PlanID: string2UUID(planUID),
+		PlanID: planID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
@@ -53,8 +58,13 @@ func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*d
 }
 
 func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrPlanRequestNotExists
+	}
+
 	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
-		PlanID: string2UUID(planUID),
+		PlanID: planID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
@@ -75,9 +85,19 @@ func (r *PlanRepo) GetDirection(ctx context.Context, directionId int32) (string,
 }
 
 func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string) error {
+	userID, err := string2UUID(userId)
+	if err != nil {
+		return domain.ErrUserNotExists
+	}
+
+	planID, err := string2UUID(planId)
+	if err != nil {
+		return domain.ErrPlanRequestNotExists
+	}
+
 	return r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
-		UserID: string2UUID(userId),
-		PlanID: string2UUID(planId),
+		UserID: userID,
+		PlanID: planID,
 	})
 }
 
