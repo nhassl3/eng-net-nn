@@ -1,11 +1,46 @@
 package postgres
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
+
+// mapNotFound converts pgx.ErrNoRows into notFoundErr so it survives as a
+// *domain.DomainError up through the service layer to handleError, instead
+// of falling through to a generic wrapped error that maps to 500.
+func mapNotFound(err error, notFoundErr error) error {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return notFoundErr
+	}
+	return err
+}
+
+// mapConstraintErr centralizes Postgres constraint-violation codes into
+// domain errors: unique-violation (23505) becomes alreadyExistsErr (pass nil
+// to leave it unmapped), not-null and check violations (23502, 23514) become
+// domain.ErrInvalidInput (400, instead of a raw 500). Any other error,
+// including a pgconn.PgError with an unhandled code, is returned unchanged.
+func mapConstraintErr(err error, alreadyExistsErr error) error {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	if !ok {
+		return err
+	}
+	switch pgErr.Code {
+	case "23505":
+		if alreadyExistsErr != nil {
+			return alreadyExistsErr
+		}
+	case "23502", "23514":
+		return domain.ErrInvalidInput
+	}
+	return err
+}
 
 // pgTimeTZ extracts time.Time from a pgtype.Timestamptz value.
 // Falls back to a zero value if the timestamp is not valid.

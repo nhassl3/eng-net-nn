@@ -3,12 +3,9 @@ package service
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/pkg/logger"
@@ -55,11 +52,6 @@ func (s *VacanciesService) GetVacancy(ctx context.Context, vacancyId string) (*d
 func (s *VacanciesService) Create(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
 	vacancy, err := s.repo.CreateVacancy(ctx, params)
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			if pgErr.Code == "23505" {
-				return nil, domain.ErrVacancyAlreadyExists
-			}
-		}
 		return nil, fmt.Errorf("vacancies_service.Create: %w", err)
 	}
 	return vacancy, nil
@@ -134,9 +126,6 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 
 	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.ErrVacancyNotExists
-		}
 		return fmt.Errorf("vacancies_service.Respond: failed to get vacancy %w", err)
 	}
 
@@ -191,9 +180,6 @@ func (s *VacanciesService) presignResume(ctx context.Context, rv *domain.Respond
 func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
 	respondVacancies, err := s.repo.GetRespondVacancies(ctx)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrRespondVacanciesNotExists
-		}
 		return nil, fmt.Errorf("vacancies_service.GetRespondVacancies: %w", err)
 	}
 	for i := range respondVacancies.RespondVacancies {
@@ -205,9 +191,6 @@ func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.Res
 func (s *VacanciesService) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
 	respondVacancy, err := s.repo.GetRespondVacancy(ctx, respondVacancyId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrRespondVacancyNotExists
-		}
 		return nil, fmt.Errorf("vacancies_service.GetRespondVacancy: %w", err)
 	}
 	s.presignResume(ctx, respondVacancy)

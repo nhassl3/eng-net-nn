@@ -27,6 +27,9 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 		Email:           params.EmailToFeedback,
 	})
 	if err != nil {
+		if mapped := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); mapped != err {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.CreatePlan: %w", err)
 	}
 	return new(mapPlan(plan)), nil
@@ -48,6 +51,9 @@ func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*d
 		PlanID: planID,
 	})
 	if err != nil {
+		if mapped := mapNotFound(err, domain.ErrPlanRequestNotExists); mapped != err {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
@@ -67,6 +73,9 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPla
 		PlanID: planID,
 	})
 	if err != nil {
+		if mapped := mapNotFound(err, domain.ErrPlanRequestNotExists); mapped != err {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
@@ -79,6 +88,9 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPla
 func (r *PlanRepo) GetDirection(ctx context.Context, directionId int32) (string, error) {
 	name, err := r.db.GetDirection(ctx, directionId)
 	if err != nil {
+		if mapped := mapNotFound(err, domain.ErrDirectionNotFound); mapped != err {
+			return "", mapped
+		}
 		return "", fmt.Errorf("plan_repository.GetDirection: %w", err)
 	}
 	return name.String, nil
@@ -95,10 +107,19 @@ func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string)
 		return domain.ErrPlanRequestNotExists
 	}
 
-	return r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
+	if err := r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
 		UserID: userID,
 		PlanID: planID,
-	})
+	}); err != nil {
+		if mapped := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); mapped != err {
+			return mapped
+		}
+		if mapped := mapNotFound(err, domain.ErrPlanRequestNotExists); mapped != err {
+			return mapped
+		}
+		return fmt.Errorf("plan_repository.CreateLinkRequest: %w", err)
+	}
+	return nil
 }
 
 // GetAllPlans returns plans
@@ -108,6 +129,9 @@ func (r *PlanRepo) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
 		Offset: 0,
 	})
 	if err != nil {
+		if mapped := mapNotFound(err, domain.ErrPlanRequestNotExists); mapped != err {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
 	}
 	return mapPlans(allUsersPlans), nil

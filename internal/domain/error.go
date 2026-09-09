@@ -25,6 +25,7 @@ const (
 	InvalidParam             = "INVALID_PARAM"
 	EmptyData                = "EMPTY_DATA"
 	Unauthorized             = "UNAUTHORIZED"
+	InvalidInput             = "INVALID_INPUT"
 )
 
 type DomainError struct {
@@ -69,4 +70,5 @@ var (
 	ErrInvalidParam              = newError(InvalidParam, "invalid param")
 	ErrEmptyData                 = newError(EmptyData, "empty data")
 	ErrUnauthorized              = newError(Unauthorized, "unauthorized")
+	ErrInvalidInput              = newError(InvalidInput, "invalid input: violates a database constraint")
 )

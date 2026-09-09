@@ -2,12 +2,9 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
@@ -45,28 +42,13 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 		_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)
 	}()
 
-	var pgErr *pgconn.PgError
-
 	result, err := s.repo.CreatePlan(ctx, plan)
 	if err != nil {
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return nil, domain.ErrPlanRequestAlreadyExists
-			}
-		}
 		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
 	}
 
 	if userId != nil && *userId != "" {
 		if err := s.repo.CreateLinkRequest(ctx, *userId, result.UUID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, domain.ErrPlanRequestNotExists
-			} else if errors.As(err, &pgErr) {
-				if pgErr.Code == "23505" {
-					return nil, domain.ErrPlanRequestAlreadyExists
-				}
-				// TODO: add new errors with new code (constraint errors)
-			}
 			return nil, fmt.Errorf("plan_service.CreatePlan.CreateLinkRequest: %w", err)
 		}
 	}
@@ -77,9 +59,6 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
 	result, err := s.repo.GetUserPlan(ctx, planUID, userUID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrPlanRequestNotExists
-		}
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}
 	return result, nil
@@ -88,9 +67,6 @@ func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string)
 func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
 	result, err := s.repo.GetPlan(ctx, planUID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrPlanRequestNotExists
-		}
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}
 	return result, nil
@@ -99,9 +75,6 @@ func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.Use
 func (s *PlansService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
 	result, err := s.repo.GetAllPlans(ctx)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrPlanRequestNotExists
-		}
 		return nil, fmt.Errorf("plan_service.GetAllPlans: %w", err)
 	}
 	return result, nil
