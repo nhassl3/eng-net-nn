@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
+<h2 style="color:#2563eb">Новый отклик на вакансию</h2>
+<p style="color:#6b7280">Вакансия: <strong>{{.VacancyName}}</strong></p>
+<table style="border-collapse:collapse;width:100%">
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Имя</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.Name}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Email</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.Email}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Телефон</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.Phone}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Город</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.City}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Опыт</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.Experience}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">О себе</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb">{{.AboutSelf}}</td></tr>
+    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Резюме</td>
+        <td style="padding:8px 12px;border:1px solid #e5e7eb"><a href="{{.Link}}" style="color:#2563eb">Открыть резюме</a></td></tr>
+</table>
+</body>
+</html>
