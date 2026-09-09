@@ -19,6 +19,24 @@ type Notifier interface {
 	Close(ctx context.Context) error
 }
 
+type NewApplicantsFormInput struct {
+	VacancyName,
+	Name,
+	Email,
+	Phone,
+	City,
+	Experience,
+	AboutSelf,
+	Link string
+}
+
+type NewPlanFormInput struct {
+	Name,
+	Email,
+	Direction,
+	Description string
+}
+
 // NoopNotifier logs notifications without sending emails.
 // Used when SMTP host is not configured (e.g. local dev).
 type NoopNotifier struct {
@@ -193,84 +211,51 @@ func (m *SMTPMailer) send(ctx context.Context, msg *mail.Msg, subject, htmlBody 
 
 func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, resumeUrl string, form *domain.ApplicantsFormInput) error {
 	subject := fmt.Sprintf("Новый отклик на вакансию: %s", vacancyName)
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
-  <h2 style="color:#2563eb">Новый отклик на вакансию</h2>
-  <p style="color:#6b7280">Вакансия: <strong>%s</strong></p>
-  <table style="border-collapse:collapse;width:100%%">
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Имя</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Email</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Телефон</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Город</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Опыт</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">О себе</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Резюме</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb"><a href="%s" style="color:#2563eb">Открыть резюме</a></td></tr>
-  </table>
-</body>
-</html>`,
-		vacancyName,
-		form.FullName, form.Email, form.PhoneNumber,
-		form.City, form.Exp, form.Description, resumeUrl,
-	)
+	body, err := Render(NewApplicant, NewApplicantsFormInput{
+		VacancyName: vacancyName,
+		Name:        form.FullName,
+		Email:       form.Email,
+		Phone:       form.PhoneNumber,
+		City:        form.City,
+		Experience:  form.Exp,
+		AboutSelf:   form.Description,
+		Link:        resumeUrl,
+	})
+	if err != nil {
+		return fmt.Errorf("mailer.NotifyNewApplicant: %w", err)
+	}
 	m.enqueue(job{subject: subject, body: body, replyTo: form.Email})
 	return nil
 }
 
 func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInputEmail) error {
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
-  <h2 style="color:#2563eb">Новая заявка на разработку плана</h2>
-  <table style="border-collapse:collapse;width:100%%">
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Имя</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Email для связи</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Направление</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-    <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600">Описание задачи</td>
-        <td style="padding:8px 12px;border:1px solid #e5e7eb">%s</td></tr>
-  </table>
-</body>
-</html>`,
-		plan.FullName, plan.EmailToFeedback, plan.Direction, plan.TaskDescription,
-	)
+	body, err := Render(NewPlan, NewPlanFormInput{
+		Name:        plan.FullName,
+		Email:       plan.EmailToFeedback,
+		Direction:   plan.Direction,
+		Description: plan.TaskDescription,
+	})
+	if err != nil {
+		return fmt.Errorf("mailer.NotifyNewPlan: %w", err)
+	}
 	m.enqueue(job{subject: "Новая заявка на разработку плана", body: body, replyTo: plan.EmailToFeedback})
 	return nil
 }
 
 func (m *SMTPMailer) NotifyUserAboutVacancy(_ context.Context, vacancyName, userEmail string) error {
-	body := fmt.Sprintf(`<!DOCTYPE html>
-	<html>
-	<head><meta charset="UTF-8"></head>
-	<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
-	  <h2 style="color:#2563eb">Рассмотрение Вашего отклика началось!</h2>
-	</body>
-	</html>
-	`)
+	body, err := Render(NotifyAboutVacancy, nil)
+	if err != nil {
+		return fmt.Errorf("mailer.NotifyUserAboutVacancy: %w", err)
+	}
 	m.enqueue(job{subject: fmt.Sprintf("Отклик на вакансию %s", vacancyName), body: body, replyTo: userEmail, toUser: true})
 	return nil
 }
 
 func (m *SMTPMailer) NotifyUserAboutPlan(_ context.Context, userEmail string) error {
-	body := fmt.Sprintf(`<!DOCTYPE html>
-	<html>
-	<head><meta charset="UTF-8"></head>
-	<body style="font-family:sans-serif;color:#222;max-width:640px;margin:0 auto">
-	  <h2 style="color:#2563eb">Рассмотрение Вашего плана началось! Спасибо, что выбираете IpBuild Unet!</h2>
-	</body>
-	</html>
-	`)
+	body, err := Render(NotifyAboutPlan, nil)
+	if err != nil {
+		return fmt.Errorf("mailer.NotifyUserAboutPlan: %w", err)
+	}
 	m.enqueue(job{subject: "Рассмотрение Вашего плана", body: body, replyTo: userEmail, toUser: true})
 	return nil
 }
