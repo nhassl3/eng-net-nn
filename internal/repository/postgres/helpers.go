@@ -22,8 +22,12 @@ func uuid2String(id uuid.UUID) string {
 }
 
 // string2UUID converts string to uuid.UUID type
-func string2UUID(id string) uuid.UUID {
-	return uuid.MustParse(id)
+func string2UUID(id string) (uuid.UUID, error) {
+	r, err := uuid.Parse(id)
+	if err != nil {
+		return [16]byte{}, err
+	}
+	return r, nil
 }
 
 // uuidPtrToNullable converts an optional string UUID pointer to pgtype.UUID.
