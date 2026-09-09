@@ -63,17 +63,3 @@ func stringToNullable(s string) pgtype.Text {
 	}
 	return pgtype.Text{String: s, Valid: true}
 }
-
-func nFloat2Nullable(f *float64) pgtype.Float8 {
-	if f == nil {
-		return pgtype.Float8{Valid: false}
-	}
-	return float2Nullable(*f)
-}
-
-func float2Nullable(f float64) pgtype.Float8 {
-	if f == 0 {
-		return pgtype.Float8{Valid: false}
-	}
-	return pgtype.Float8{Float64: f, Valid: true}
-}
