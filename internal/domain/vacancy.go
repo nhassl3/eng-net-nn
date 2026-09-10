@@ -50,6 +50,7 @@ type UpdateJobDirectionInput struct {
 
 type RespondVacancies struct {
 	RespondVacancies []RespondVacancy `json:"respond_vacancies"`
+	Total            int              `json:"total"`
 }
 
 type RespondVacancy struct {
