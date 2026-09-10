@@ -47,7 +47,11 @@ func (h *Handler) getResponseFromRequest(c *gin.Context) {
 }
 
 func (h *Handler) getAllPlans(c *gin.Context) {
-	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context())
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
+	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllPlans", err)
 		return

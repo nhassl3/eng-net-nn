@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -14,7 +13,10 @@ import (
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
-	limit, offset := parseQuery(c)
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
 	vacancies, err := h.services.Vacancies.List(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllVacancies", err)
@@ -89,7 +91,10 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 }
 
 func (h *Handler) listJd(c *gin.Context) {
-	limit, offset := parseQuery(c)
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
 	JDs, err := h.services.Vacancies.ListJd(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "listJd", err)
@@ -218,7 +223,11 @@ func (h *Handler) respond(c *gin.Context) {
 }
 
 func (h *Handler) getRespondVacancies(c *gin.Context) {
-	respondVacancies, err := h.services.Vacancies.GetRespondVacancies(c.Request.Context())
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
+	respondVacancies, err := h.services.Vacancies.GetRespondVacancies(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getRespondVacancies", err)
 		return
@@ -234,16 +243,4 @@ func (h *Handler) getRespondVacancy(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, respondVacancy)
-}
-
-func parseQuery(c *gin.Context) (int32, int32) {
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	if err != nil {
-		limit = 4
-	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if err != nil {
-		offset = 0
-	}
-	return int32(limit), int32(offset)
 }
