@@ -72,6 +72,9 @@ func handleError(c *gin.Context, op string, err error) {
 	}
 }
 
+// TODO: function is not safety because splits all by last char ':'
+// for example 'invalid city: city' returns 'city' in this function
+// instead of 'invalid city: city' on idea
 func errString(errStr string) string {
-	return errStr[1+strings.LastIndex(errStr, ":"):]
+	return strings.TrimSpace(errStr[1+strings.LastIndex(errStr, ":"):])
 }
