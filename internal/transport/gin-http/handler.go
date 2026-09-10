@@ -111,11 +111,11 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 			vacanciesAdmin := admin.Group("/vacancies")
 			{
 				vacanciesAdmin.POST("/", h.createVacancy)
-				vacanciesAdmin.PUT("/:id", h.updateVacancy)
-				vacanciesAdmin.DELETE("/:id", h.deleteVacancy)
+				vacanciesAdmin.PUT("/:id", h.updateVacancy)    // id vacancy
+				vacanciesAdmin.DELETE("/:id", h.deleteVacancy) // id vacancy
 
-				vacanciesAdmin.GET("/", h.getRespondVacancies)
-				vacanciesAdmin.GET("/:id", h.getRespondVacancy)
+				vacanciesAdmin.GET("/", h.getRespondVacancies)  // list of responds
+				vacanciesAdmin.GET("/:id", h.getRespondVacancy) // id respond
 			}
 
 			jobDirectionsAdmin := admin.Group("/job_directions")

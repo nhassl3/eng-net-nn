@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -74,7 +73,7 @@ func mapUser(user db.User) domain.User {
 		Username:  user.Username,
 		FullName:  user.FullName.String,
 		Email:     user.Email,
-		CreatedAt: pgTimeTZ(user.CreatedAt, time.UTC),
-		UpdatedAt: pgTimeTZ(user.UpdatedAt, time.UTC),
+		CreatedAt: pgTimeTZ(user.CreatedAt),
+		UpdatedAt: pgTimeTZ(user.UpdatedAt),
 	}
 }

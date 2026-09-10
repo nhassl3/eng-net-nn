@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
@@ -33,7 +32,6 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 		}
 	}
 
-	directionName := strconv.Itoa(int(plan.Direction))
 	name, err := s.repo.GetDirection(ctx, plan.Direction)
 	if name == "" {
 		if err != nil {
@@ -41,12 +39,11 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 		}
 		return nil, domain.ErrDirectionNotFound
 	}
-	directionName = name
 
 	_ = s.mailer.NotifyNewPlan(ctx, &domain.CreatePlanInputEmail{
 		FullName:        result.FullName,
 		TaskDescription: result.TaskDescription,
-		Direction:       directionName,
+		Direction:       name,
 		EmailToFeedback: plan.EmailToFeedback,
 	})
 	_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)

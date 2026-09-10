@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
@@ -291,8 +290,8 @@ func mapVacancyWithJd(v db.VacancyWithJd) domain.VacancyWithJd {
 			RequiredExp: v.RequiredExp.String,
 			PayDay:      v.PayDay,
 			Skills:      v.Skills,
-			CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
-			UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+			CreatedAt:   pgTimeTZ(v.CreatedAt),
+			UpdatedAt:   pgTimeTZ(v.UpdatedAt),
 		},
 		JobDirection: domain.JobDirection{
 			Id:            v.Jd,
@@ -311,8 +310,8 @@ func mapVacancy(v db.Vacancy) domain.Vacancy {
 		RequiredExp: v.RequiredExp.String,
 		PayDay:      v.PayDay,
 		Skills:      v.Skills,
-		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
-		UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+		CreatedAt:   pgTimeTZ(v.CreatedAt),
+		UpdatedAt:   pgTimeTZ(v.UpdatedAt),
 	}
 }
 
@@ -358,6 +357,6 @@ func mapRespondVacancy(v db.UserRespond) domain.RespondVacancy {
 		// Raw object key; the service turns it into a presigned URL on read.
 		ResumeUrl: v.Resume.String,
 		VacancyId: uuid2String(v.VacancyID),
-		CreatedAt: pgTimeTZ(v.CreatedAt, time.UTC),
+		CreatedAt: pgTimeTZ(v.CreatedAt),
 	}
 }

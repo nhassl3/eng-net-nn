@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -150,7 +149,7 @@ func mapPlan(plan db.Plan) domain.Plan {
 		Direction:       plan.Direction,
 		TaskDescription: plan.TaskDescription.String,
 		EmailToFeedback: plan.Email,
-		CreatedAt:       pgTimeTZ(plan.CreatedAt, time.UTC),
+		CreatedAt:       pgTimeTZ(plan.CreatedAt),
 	}
 }
 
