@@ -70,8 +70,8 @@ func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.Use
 	return result, nil
 }
 
-func (s *PlansService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
-	result, err := s.repo.GetAllPlans(ctx)
+func (s *PlansService) GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error) {
+	result, err := s.repo.GetAllPlans(ctx, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.GetAllPlans: %w", err)
 	}

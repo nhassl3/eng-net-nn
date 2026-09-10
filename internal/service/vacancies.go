@@ -175,8 +175,8 @@ func (s *VacanciesService) presignResume(ctx context.Context, rv *domain.Respond
 	rv.ResumeUrl = url
 }
 
-func (s *VacanciesService) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
-	respondVacancies, err := s.repo.GetRespondVacancies(ctx)
+func (s *VacanciesService) GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error) {
+	respondVacancies, err := s.repo.GetRespondVacancies(ctx, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_service.GetRespondVacancies: %w", err)
 	}
