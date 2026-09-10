@@ -34,7 +34,7 @@ type Vacancies interface {
 	RemoveJd(ctx context.Context, jdId int64) error
 
 	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
-	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
+	GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }
 
@@ -44,7 +44,7 @@ type Plan interface {
 	GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error)
 	GetDirection(ctx context.Context, directionId int32) (string, error)
 	CreateLinkRequest(ctx context.Context, userId, planId string) error
-	GetAllPlans(ctx context.Context) (*domain.Plans, error)
+	GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error)
 }
 
 type Repository struct {
