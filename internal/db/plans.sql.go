@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPlans = `-- name: CountPlans :one
+SELECT COUNT(*) FROM plans
+`
+
+func (q *Queries) CountPlans(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPlans)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createLinkRequest = `-- name: CreateLinkRequest :exec
 INSERT INTO link_user_with_plan (user_id, plan_id) VALUES ($1, $2)
 `
@@ -99,6 +110,48 @@ func (q *Queries) GetResponseFromRequest(ctx context.Context, planID uuid.UUID) 
 	row := q.db.QueryRow(ctx, getResponseFromRequest, planID)
 	var i LinkUserWithPlan
 	err := row.Scan(&i.UserID, &i.PlanID)
+	return i, err
+}
+
+const getUserPlan = `-- name: GetUserPlan :one
+SELECT p.id, p.full_name, p.direction, p.task_description, p.email, p.created_at, u.id, u.username, u.full_name, u.email, u.created_at, u.updated_at, u.hashed_password, u.role
+FROM plans p
+    INNER JOIN link_user_with_plan up ON p.id=up.plan_id
+    INNER JOIN users u ON up.user_id=u.id
+WHERE
+    ($1::varchar IS NULL OR u.id=$1::varchar)
+  AND p.id=$2
+`
+
+type GetUserPlanParams struct {
+	UserID pgtype.Text `json:"user_id"`
+	PlanID uuid.UUID   `json:"plan_id"`
+}
+
+type GetUserPlanRow struct {
+	Plan Plan `json:"plan"`
+	User User `json:"user"`
+}
+
+func (q *Queries) GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUserPlanRow, error) {
+	row := q.db.QueryRow(ctx, getUserPlan, arg.UserID, arg.PlanID)
+	var i GetUserPlanRow
+	err := row.Scan(
+		&i.Plan.ID,
+		&i.Plan.FullName,
+		&i.Plan.Direction,
+		&i.Plan.TaskDescription,
+		&i.Plan.Email,
+		&i.Plan.CreatedAt,
+		&i.User.ID,
+		&i.User.Username,
+		&i.User.FullName,
+		&i.User.Email,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.HashedPassword,
+		&i.User.Role,
+	)
 	return i, err
 }
 

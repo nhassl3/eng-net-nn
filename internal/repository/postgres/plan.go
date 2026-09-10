@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
@@ -28,60 +27,120 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 		Email:           params.EmailToFeedback,
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.CreatePlan: %w", err)
 	}
 	return new(mapPlan(plan)), nil
 }
 
-func (r *PlanRepo) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
-	userPlan, err := r.db.GetResponseFromRequest(ctx, string2UUID(planId))
-	if err != nil {
-		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
+func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
+	userId := stringToNullable(userUID)
+	if userId.Valid == false {
+		return nil, domain.ErrInvalidToken
 	}
 
-	user, err := r.db.GetUser(ctx, db.GetUserParams{
-		ID: pgtype.UUID{Bytes: userPlan.UserID, Valid: true},
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrPlanRequestNotExists
+	}
+
+	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
+		UserID: userId,
+		PlanID: planID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
-	}
-
-	plan, err := r.db.GetPlan(ctx, string2UUID(planId))
-	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
 	return &domain.UserPlan{
-		User: new(mapUser(user)),
-		Plan: new(mapPlan(plan)),
+		User: new(mapUser(userPlan.User)),
+		Plan: new(mapPlan(userPlan.Plan)),
+	}, nil
+}
+
+func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrPlanRequestNotExists
+	}
+
+	userPlan, err := r.db.GetUserPlan(ctx, db.GetUserPlanParams{
+		PlanID: planID,
+	})
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
+		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
+	}
+
+	return &domain.UserPlan{
+		User: new(mapUser(userPlan.User)),
+		Plan: new(mapPlan(userPlan.Plan)),
 	}, nil
 }
 
 func (r *PlanRepo) GetDirection(ctx context.Context, directionId int32) (string, error) {
 	name, err := r.db.GetDirection(ctx, directionId)
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return "", mapped
+		}
 		return "", fmt.Errorf("plan_repository.GetDirection: %w", err)
 	}
 	return name.String, nil
 }
 
 func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string) error {
-	return r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
-		UserID: string2UUID(userId),
-		PlanID: string2UUID(planId),
-	})
+	userID, err := string2UUID(userId)
+	if err != nil {
+		return domain.ErrUserNotExists
+	}
+
+	planID, err := string2UUID(planId)
+	if err != nil {
+		return domain.ErrPlanRequestNotExists
+	}
+
+	if err := r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
+		UserID: userID,
+		PlanID: planID,
+	}); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); ok {
+			return mapped
+		}
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return mapped
+		}
+		return fmt.Errorf("plan_repository.CreateLinkRequest: %w", err)
+	}
+	return nil
 }
 
 // GetAllPlans returns plans
-func (r *PlanRepo) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
+func (r *PlanRepo) GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error) {
 	allUsersPlans, err := r.db.GetAllPlans(ctx, db.GetAllPlansParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
+		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
+	}
+
+	total, err := r.db.CountPlans(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
 	}
-	return mapPlans(allUsersPlans), nil
+
+	return mapPlans(allUsersPlans, total), nil
 }
 
 func mapPlan(plan db.Plan) domain.Plan {
@@ -95,13 +154,13 @@ func mapPlan(plan db.Plan) domain.Plan {
 	}
 }
 
-func mapPlans(plans []db.Plan) *domain.Plans {
+func mapPlans(plans []db.Plan, total int64) *domain.Plans {
 	domainPlan := make([]domain.Plan, len(plans))
 	for i := range plans {
 		domainPlan[i] = mapPlan(plans[i])
 	}
 	return &domain.Plans{
 		Plans: domainPlan,
-		Total: len(plans),
+		Total: int(total),
 	}
 }

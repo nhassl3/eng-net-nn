@@ -4,16 +4,19 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/pkg/logger"
 	"github.com/nhassl3/IpBuild-backend/pkg/minio"
 )
 
 func (h *Handler) getAllVacancies(c *gin.Context) {
-	limit, offset := parseQuery(c)
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
 	vacancies, err := h.services.Vacancies.List(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllVacancies", err)
@@ -24,6 +27,11 @@ func (h *Handler) getAllVacancies(c *gin.Context) {
 
 func (h *Handler) getVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "getting not exists vacancy")
+		return
+	}
+
 	vacancy, err := h.services.Vacancies.GetVacancy(c.Request.Context(), id)
 	if err != nil {
 		handleError(c, "getVacancy", err)
@@ -49,6 +57,10 @@ func (h *Handler) createVacancy(c *gin.Context) {
 
 func (h *Handler) updateVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "updating not exists vacancy")
+		return
+	}
 
 	var input domain.UpdatedVacancyInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -66,6 +78,10 @@ func (h *Handler) updateVacancy(c *gin.Context) {
 
 func (h *Handler) deleteVacancy(c *gin.Context) {
 	id := c.Param("id")
+	if id == "" {
+		NewErrorResponse(c, http.StatusBadRequest, "deleting not exists vacancy")
+		return
+	}
 
 	if err := h.services.Vacancies.Delete(c.Request.Context(), id); err != nil {
 		handleError(c, "deleteVacancy", err)
@@ -75,7 +91,10 @@ func (h *Handler) deleteVacancy(c *gin.Context) {
 }
 
 func (h *Handler) listJd(c *gin.Context) {
-	limit, offset := parseQuery(c)
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
 	JDs, err := h.services.Vacancies.ListJd(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "listJd", err)
@@ -85,8 +104,9 @@ func (h *Handler) listJd(c *gin.Context) {
 }
 
 func (h *Handler) getJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "getJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "getJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "getting not exists vacancy job direction")
 		return
 	}
 
@@ -114,8 +134,9 @@ func (h *Handler) createJd(c *gin.Context) {
 }
 
 func (h *Handler) updateJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "updateJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "updateJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "updating not exists vacancy job direction")
 		return
 	}
 
@@ -134,8 +155,9 @@ func (h *Handler) updateJd(c *gin.Context) {
 }
 
 func (h *Handler) deleteJd(c *gin.Context) {
-	idInt, ok := h.paramInt32(c, "id", "deleteJd")
-	if !ok {
+	idInt, ok := h.paramInt64(c, "id", "deleteJd")
+	if !ok || idInt <= 0 {
+		NewErrorResponse(c, http.StatusBadRequest, "deleting not exists vacancy job direction")
 		return
 	}
 
@@ -149,11 +171,17 @@ func (h *Handler) deleteJd(c *gin.Context) {
 // respond a handler which creates email for owner with next
 func (h *Handler) respond(c *gin.Context) {
 	var input struct {
-		VacancyID string `json:"vacancy_id" validator:"required"`
+		VacancyID string `json:"vacancy_id" binding:"required"`
 		domain.ApplicantsFormInput
 	}
 	if err := json.Unmarshal([]byte(c.PostForm("json")), &input); err != nil {
 		logger.From(c.Request.Context()).Warn("respond: decode json field", logger.Err(err))
+		NewErrorResponse(c, http.StatusBadRequest, "invalid json body")
+		return
+	}
+
+	if err := binding.Validator.ValidateStruct(&input); err != nil {
+		logger.From(c.Request.Context()).Warn("respond: validate json field", logger.Err(err))
 		NewErrorResponse(c, http.StatusBadRequest, "invalid json body")
 		return
 	}
@@ -195,7 +223,11 @@ func (h *Handler) respond(c *gin.Context) {
 }
 
 func (h *Handler) getRespondVacancies(c *gin.Context) {
-	respondVacancies, err := h.services.Vacancies.GetRespondVacancies(c.Request.Context())
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
+	respondVacancies, err := h.services.Vacancies.GetRespondVacancies(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getRespondVacancies", err)
 		return
@@ -211,16 +243,4 @@ func (h *Handler) getRespondVacancy(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, respondVacancy)
-}
-
-func parseQuery(c *gin.Context) (int32, int32) {
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	if err != nil {
-		limit = 4
-	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if err != nil {
-		offset = 0
-	}
-	return int32(limit), int32(offset)
 }

@@ -102,7 +102,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 		plan := api.Group("/plans")
 		{
-			plan.POST("/", h.requestPlan)
+			plan.POST("/", h.middleware.UserIdentityOmitempty, h.requestPlan)
 			plan.GET("/:id", h.middleware.UserIdentity, h.getResponseFromRequest)
 		}
 

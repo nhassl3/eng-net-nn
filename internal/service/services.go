@@ -33,22 +33,23 @@ type Vacancies interface {
 	Delete(ctx context.Context, vacancyId string) error
 
 	ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error)
-	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
+	GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error)
 
 	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
-	UpdateJd(ctx context.Context, jdId int32, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
-	DeleteJd(ctx context.Context, jdId int32) error
+	UpdateJd(ctx context.Context, jdId int64, updJd *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
+	DeleteJd(ctx context.Context, jdId int64) error
 
 	Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error
-	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
+	GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }
 
 // Plan service — individual plan requests
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error)
-	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
-	GetAllPlans(ctx context.Context) (*domain.Plans, error)
+	GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error)
+	GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error)
+	GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error)
 }
 
 type Service struct {

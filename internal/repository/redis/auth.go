@@ -25,20 +25,12 @@ func NewAuthRedisRepository(redis *redis.Client, userProfileTTL time.Duration) *
 }
 
 func (r *AuthRedisRepository) Profile(ctx context.Context, params domain.GetMeParams) (*domain.User, error) {
-	key := profileKey
-	switch {
-	case params.Username != nil && *params.Username != "":
-		key += *params.Username
-	case params.Email != nil && *params.Email != "":
-		key += *params.Email
-	case params.UUID != nil && *params.UUID != "":
-		key += *params.UUID
-	default:
+	if params.UUID == nil || *params.UUID == "" {
 		return nil, domain.ErrRedisNotFound
 	}
 
-	user := &domain.User{}
-	if err := r.redis.Get(ctx, key).Scan(user); err != nil {
+	var user *domain.User
+	if err := r.redis.Get(ctx, profileKey+*params.UUID).Scan(user); err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, domain.ErrRedisNotFound
 		}
@@ -56,13 +48,6 @@ func (r *AuthRedisRepository) SetProfile(ctx context.Context, user *domain.User)
 	key := profileKey + user.UUID
 	if err := r.redis.Set(ctx, key, user, r.userProfileTTL).Err(); err != nil {
 		return fmt.Errorf("AuthRedis.SetProfile: %w", err)
-	}
-
-	if user.Username != "" {
-		_ = r.redis.Set(ctx, profileKey+user.Username, user, r.userProfileTTL).Err()
-	}
-	if user.Email != "" {
-		_ = r.redis.Set(ctx, profileKey+user.Email, user, r.userProfileTTL).Err()
 	}
 
 	return nil

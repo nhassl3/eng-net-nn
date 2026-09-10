@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countRespondVacancies = `-- name: CountRespondVacancies :one
+SELECT COUNT(*) FROM user_responds
+`
+
+func (q *Queries) CountRespondVacancies(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countRespondVacancies)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createJobDirection = `-- name: CreateJobDirection :one
 INSERT INTO job_directions (name, tags, description) VALUES ($1::varchar, $2::text[], $3::text) RETURNING id, name, tags, description
 `
@@ -229,6 +240,7 @@ const getVacancy = `-- name: GetVacancy :one
 SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd WHERE
                             ($1::uuid IS NULL OR id=$1::uuid)
                             AND ($2::varchar IS NULL OR name=$2::varchar)
+                            AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL) LIMIT 1
 `
 
 type GetVacancyParams struct {
@@ -268,7 +280,8 @@ func (q *Queries) RemoveJobDirection(ctx context.Context, id int64) error {
 const removeVacancy = `-- name: RemoveVacancy :exec
 DELETE FROM vacancies WHERE
                           ($1::uuid IS NULL OR id=$1::uuid)
-                        AND($2::varchar IS NULL OR name=$2::varchar)
+                        AND ($2::varchar IS NULL OR name=$2::varchar)
+                        AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL)
 `
 
 type RemoveVacancyParams struct {
@@ -351,9 +364,12 @@ func (q *Queries) UpdateJobDirection(ctx context.Context, arg UpdateJobDirection
 }
 
 const updateVacancy = `-- name: UpdateVacancy :one
-UPDATE vacancies SET jd=$1, name=$6::varchar, description=$2, required_exp=$3, pay_day=$4, skills=$5, updated_at=now()  WHERE
-    ($7::uuid IS NULL OR id=$7::uuid)
-                                                                                                                 AND($8::varchar IS NULL OR name=$8::varchar) RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
+UPDATE vacancies SET jd=$1, name=$6::varchar, description=$2, required_exp=$3, pay_day=$4, skills=$5, updated_at=now()
+                 WHERE
+                    ($7::uuid IS NULL OR id=$7::uuid)
+                    AND ($8::varchar IS NULL OR name=$8::varchar)
+                    AND ($7::uuid IS NOT NULL OR $8::varchar IS NOT NULL)
+                    RETURNING id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at
 `
 
 type UpdateVacancyParams struct {

@@ -39,7 +39,8 @@ func handleError(c *gin.Context, op string, err error) {
 	case errors.Is(dmnErr, domain.ErrInvalidCredentials),
 		errors.Is(dmnErr, domain.ErrInvalidToken),
 		errors.Is(dmnErr, domain.ErrTokenRevoked),
-		errors.Is(dmnErr, domain.ErrExpiredToken):
+		errors.Is(dmnErr, domain.ErrExpiredToken),
+		errors.Is(dmnErr, domain.ErrUnauthorized):
 		log.Warn("request rejected: unauthorized", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusUnauthorized, dmnErr.Code(), errString(dmnErr.Error()))
 
@@ -51,7 +52,7 @@ func handleError(c *gin.Context, op string, err error) {
 		errors.Is(dmnErr, domain.ErrRespondVacanciesNotExists),
 		errors.Is(dmnErr, domain.ErrRespondVacancyNotExists):
 		log.Warn("request rejected: not found", logger.Op(op), logger.Err(dmnErr))
-		NewErrorResponseWithCode(c, http.StatusNotFound, dmnErr.Error(), errString(dmnErr.Error()))
+		NewErrorResponseWithCode(c, http.StatusNotFound, dmnErr.Code(), errString(dmnErr.Error()))
 
 	case errors.Is(dmnErr, domain.ErrFileTooLarge):
 		log.Warn("request rejected: file too large", logger.Op(op), logger.Err(dmnErr))
@@ -61,12 +62,19 @@ func handleError(c *gin.Context, op string, err error) {
 		log.Warn("request rejected: invalid content type", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusUnsupportedMediaType, dmnErr.Code(), errString(dmnErr.Error()))
 
+	case errors.Is(dmnErr, domain.ErrInvalidParam), errors.Is(dmnErr, domain.ErrEmptyData), errors.Is(dmnErr, domain.ErrInvalidInput):
+		log.Warn("request rejected: invalid parameter", logger.Op(op), logger.Err(dmnErr))
+		NewErrorResponseWithCode(c, http.StatusBadRequest, dmnErr.Code(), errString(dmnErr.Error()))
+
 	default:
 		log.Error("request failed: unhandled error", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusInternalServerError, Internal, "internal server error")
 	}
 }
 
+// TODO: function is not safety because splits all by last char ':'
+// for example 'invalid city: city' returns 'city' in this function
+// instead of 'invalid city: city' on idea
 func errString(errStr string) string {
-	return errStr[1+strings.LastIndex(errStr, ":"):]
+	return strings.TrimSpace(errStr[1+strings.LastIndex(errStr, ":"):])
 }

@@ -60,10 +60,11 @@ type RedisTTL struct {
 }
 
 type Token struct {
-	PasetoKeyHex string        `yaml:"paseto_key_hex"`
-	Cookie       Cookie        `yaml:"cookie"`
-	AccessTTL    time.Duration `yaml:"access_ttl" env-default:"15m"`
-	RefreshTTL   time.Duration `yaml:"refresh_ttl" env-default:"168h"`
+	PASETOAccessKeyHex,
+	PASETORefreshKeyHex string
+	Cookie     Cookie        `yaml:"cookie"`
+	AccessTTL  time.Duration `yaml:"access_ttl" env-default:"15m"`
+	RefreshTTL time.Duration `yaml:"refresh_ttl" env-default:"168h"`
 }
 
 type Cookie struct {
@@ -170,7 +171,8 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.RedisServer.TTL.BlacklistRefresh = yv.GetDuration("redis.ttl.blacklist_refresh")
 	cfg.RedisServer.TTL.AuthTimeout = yv.GetDuration("redis.ttl.auth_timeout")
 
-	cfg.Token.PasetoKeyHex = ev.GetString("PASETO_KEY")
+	cfg.Token.PASETOAccessKeyHex = ev.GetString("PASETO_KEY_ACCESS_HEX")
+	cfg.Token.PASETORefreshKeyHex = ev.GetString("PASETO_KEY_REFRESH_HEX")
 	cfg.Token.AccessTTL = yv.GetDuration("token.access_ttl")
 	cfg.Token.RefreshTTL = yv.GetDuration("token.refresh_ttl")
 	cfg.Token.Cookie.Name = yv.GetString("token.cookie.name")

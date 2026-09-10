@@ -58,7 +58,7 @@ type Plan struct {
 
 type User struct {
 	ID             uuid.UUID          `json:"id"`
-	Username       pgtype.Text        `json:"username"`
+	Username       string             `json:"username"`
 	FullName       pgtype.Text        `json:"full_name"`
 	Email          string             `json:"email"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS "users" (
                          "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-                         "username" varchar,
+                         "username" varchar unique not null,
                          "full_name" varchar,
                          "email" varchar UNIQUE NOT NULL,
                          "created_at" timestamptz NOT NULL DEFAULT (now()),

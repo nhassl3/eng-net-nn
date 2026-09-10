@@ -22,9 +22,6 @@ func NewVacanciesRepo(db *db.Store) *VacanciesRepo {
 }
 
 func (r *VacanciesRepo) List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	vacancies, err := r.db.GetVacancies(ctx, db.GetVacanciesParams{
 		Offset: offset,
 		Limit:  limit,
@@ -40,6 +37,9 @@ func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*doma
 		ID: uuidPtr2Nullable(vacancyId),
 	})
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrVacancyNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy: %w", err)
 	}
 	return new(mapVacancyWithJd(vacancy)), nil
@@ -59,14 +59,21 @@ func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.Create
 		Skills:      params.Skills,
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrVacancyAlreadyExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.Create: failed to create vacancy: %w", err)
 	}
 	return new(mapVacancy(vacancy)), nil
 }
 
 func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, updVacancy *domain.UpdatedVacancyInput) error {
+	uuid := uuidPtr2Nullable(vacancyId)
+	if !uuid.Valid {
+		return domain.ErrInvalidParam
+	}
 	if updVacancy == nil {
-		return fmt.Errorf("vacancies_repo.Update: vacancies input is nil")
+		return domain.ErrEmptyData
 	}
 	return r.db.ExecTx(ctx, func(q *db.Queries) error {
 		var (
@@ -75,14 +82,17 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 		)
 
 		vacancy, fnErr := q.GetVacancy(ctx, db.GetVacancyParams{
-			ID: uuidPtr2Nullable(vacancyId),
+			ID: uuid,
 		})
 		if fnErr != nil {
+			if mapped, ok := mapNotFound(fnErr, domain.ErrVacancyNotExists); ok {
+				return mapped
+			}
 			return fmt.Errorf("vacancies_repo.Update: failed to load vacancy id: %w", fnErr)
 		}
 
 		updateVacancyParams = db.UpdateVacancyParams{
-			ID:          uuidPtr2Nullable(vacancyId),
+			ID:          uuid,
 			Jd:          vacancy.Jd,
 			NewName:     vacancy.Name.String,
 			Description: vacancy.Description,
@@ -110,6 +120,12 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 		}
 
 		if _, fnErr = q.UpdateVacancy(ctx, updateVacancyParams); fnErr != nil {
+			if mapped, ok := mapConstraintErr(fnErr, nil); ok {
+				return mapped
+			}
+			if mapped, ok := mapNotFound(fnErr, domain.ErrVacancyNotExists); ok {
+				return mapped
+			}
 			return fmt.Errorf("vacancies_repo.Update: failed to update vacancy: %w", fnErr)
 		}
 
@@ -118,15 +134,16 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 }
 
 func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) error {
+	uuid := uuidPtr2Nullable(vacancyId)
+	if !uuid.Valid {
+		return domain.ErrInvalidParam
+	}
 	return r.db.RemoveVacancy(ctx, db.RemoveVacancyParams{
-		ID: uuidPtr2Nullable(vacancyId),
+		ID: uuid,
 	})
 }
 
 func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	jds, err := r.db.GetJDs(ctx, db.GetJDsParams{
 		Limit:  limit,
 		Offset: offset,
@@ -137,9 +154,12 @@ func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domai
 	return mapJobDirections(jds), nil
 }
 
-func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error) {
-	jd, err := r.db.GetJD(ctx, int64(jdId))
+func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error) {
+	jd, err := r.db.GetJD(ctx, jdId)
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetJd: failed to load job direction: %w", err)
 	}
 	return new(mapJobDirection(jd)), nil
@@ -161,26 +181,30 @@ func (r *VacanciesRepo) CreateJd(ctx context.Context, params *domain.CreateJobDi
 	return new(mapJobDirection(jd)), nil
 }
 
-func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
+func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int64, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error) {
 	jd, err := r.db.UpdateJobDirection(ctx, db.UpdateJobDirectionParams{
-		ID:          int64(jdId),
+		ID:          jdId,
 		Name:        stringPtrToNullable(params.Name),
 		Tags:        params.Tags,
 		Description: stringPtrToNullable(params.Description),
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, nil); ok {
+			return nil, mapped
+		}
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.UpdateJd: failed to update job direction: %w", err)
 	}
 	return new(mapJobDirection(jd)), nil
 }
 
-func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int32) error {
-	if err := r.db.RemoveJobDirection(ctx, int64(jdId)); err != nil {
+func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int64) error {
+	if err := r.db.RemoveJobDirection(ctx, jdId); err != nil {
 		// 23503 — foreign key violation: vacancies still reference this direction.
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			if pgErr.Code == "23503" {
-				return domain.ErrDirectionHasVacancies
-			}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23503" {
+			return domain.ErrDirectionHasVacancies
 		}
 		return fmt.Errorf("vacancies_repo.RemoveJd: failed to remove job direction: %w", err)
 	}
@@ -188,6 +212,11 @@ func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int32) error {
 }
 
 func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error) {
+	vacancyID, err := string2UUID(vacancyId)
+	if err != nil {
+		return "", domain.ErrVacancyNotExists
+	}
+
 	userRespondId, err := r.db.RespondToVacancy(ctx, db.RespondToVacancyParams{
 		FullName:    applicantsForm.FullName,
 		Email:       applicantsForm.Email,
@@ -196,33 +225,48 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 		Exp:         stringToNullable(applicantsForm.Exp),
 		Description: stringToNullable(applicantsForm.Description),
 		Resume:      stringToNullable(objectName),
-		VacancyID:   string2UUID(vacancyId),
+		VacancyID:   vacancyID,
 	})
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			if pgErr.Code == "23505" {
-				return "", domain.ErrRespondAlreadyExists
-			}
+		if mapped, ok := mapConstraintErr(err, domain.ErrRespondAlreadyExists); ok {
+			return "", mapped
 		}
 		return "", fmt.Errorf("vacancies_repo.RespondToVacancy: %w", err)
 	}
 	return uuid2String(userRespondId), nil
 }
 
-func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
+func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error) {
 	respondVacancies, err := r.db.GetRespondVacancies(ctx, db.GetRespondVacanciesParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrRespondVacanciesNotExists); ok {
+			return nil, mapped
+		}
+		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
+	}
+
+	total, err := r.db.CountRespondVacancies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
 	}
-	return mapRespondVacancies(respondVacancies), nil
+
+	return mapRespondVacancies(respondVacancies, total), nil
 }
 
 func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
-	respondVacancy, err := r.db.GetRespondVacancy(ctx, string2UUID(respondVacancyId))
+	id, err := string2UUID(respondVacancyId)
 	if err != nil {
+		return nil, domain.ErrRespondVacancyNotExists
+	}
+
+	respondVacancy, err := r.db.GetRespondVacancy(ctx, id)
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrRespondVacancyNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
 	}
 	return new(mapRespondVacancy(respondVacancy)), nil
@@ -291,13 +335,14 @@ func mapJobDirection(jd db.JobDirection) domain.JobDirection {
 	}
 }
 
-func mapRespondVacancies(respondVacancies []db.UserRespond) *domain.RespondVacancies {
+func mapRespondVacancies(respondVacancies []db.UserRespond, total int64) *domain.RespondVacancies {
 	domainRespondVacancies := make([]domain.RespondVacancy, len(respondVacancies))
 	for i := range respondVacancies {
 		domainRespondVacancies[i] = mapRespondVacancy(respondVacancies[i])
 	}
 	return &domain.RespondVacancies{
 		RespondVacancies: domainRespondVacancies,
+		Total:            int(total),
 	}
 }
 

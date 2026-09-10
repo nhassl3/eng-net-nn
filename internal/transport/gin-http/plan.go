@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
+	"github.com/nhassl3/IpBuild-backend/internal/transport/gin-http/middleware"
 )
 
 func (h *Handler) requestPlan(c *gin.Context) {
@@ -14,12 +15,12 @@ func (h *Handler) requestPlan(c *gin.Context) {
 		return
 	}
 
-	var userId *string
-	if id := h.middleware.GetUserIdByToken(c); id != "" {
-		userId = &id
+	var userUID *string
+	if userUid := c.GetString(middleware.UserIdCtx); userUid != "" {
+		userUID = &userUid
 	}
 
-	plan, err := h.services.Plan.CreatePlan(c.Request.Context(), &input, userId)
+	plan, err := h.services.Plan.CreatePlan(c.Request.Context(), &input, userUID)
 	if err != nil {
 		handleError(c, "requestPlan", err)
 		return
@@ -29,9 +30,15 @@ func (h *Handler) requestPlan(c *gin.Context) {
 }
 
 func (h *Handler) getResponseFromRequest(c *gin.Context) {
-	id := c.Param("id")
+	planUID := c.Param("id")
 
-	userPlan, err := h.services.Plan.GetPlan(c.Request.Context(), id)
+	userUID := c.GetString(middleware.UserIdCtx)
+	if userUID == "" {
+		handleError(c, "getResponseFromRequest", domain.ErrUnauthorized)
+		return
+	}
+
+	userPlan, err := h.services.Plan.GetUserPlan(c.Request.Context(), planUID, userUID)
 	if err != nil {
 		handleError(c, "getResponseFromRequest", err)
 		return
@@ -40,7 +47,11 @@ func (h *Handler) getResponseFromRequest(c *gin.Context) {
 }
 
 func (h *Handler) getAllPlans(c *gin.Context) {
-	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context())
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
+	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllPlans", err)
 		return
