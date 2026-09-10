@@ -47,7 +47,7 @@ func mapConstraintErr(err error, alreadyExistsErr error) (mapped error, ok bool)
 
 // pgTimeTZ extracts time.Time from a pgtype.Timestamptz value.
 // Falls back to a zero value if the timestamp is not valid.
-func pgTimeTZ(ts pgtype.Timestamptz, _ *time.Location) time.Time {
+func pgTimeTZ(ts pgtype.Timestamptz) time.Time {
 	if ts.Valid {
 		return ts.Time
 	}
