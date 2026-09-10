@@ -114,8 +114,8 @@ func (s *VacanciesService) DeleteJd(ctx context.Context, jdId int64) error {
 	return nil
 }
 
-// Respond saves the applicant's form to the DB and asynchronously notifies the
-// owner by email. SMTP errors are logged but do not fail the request.
+// Respond saves the applicant's form to the DB and notifies the owner by
+// email. SMTP errors are ignored and do not fail the request.
 func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error {
 	// Detect the real content type from the bytes (the client header is not
 	// trusted) and validate size/type.
@@ -153,10 +153,8 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 			logger.Op("Respond"), logger.String("object", objectName), logger.Err(err))
 	}
 
-	go func() {
-		_ = s.mailer.NotifyNewApplicant(ctx, vacancy.Name, resumeURL, applicantsForm)
-		_ = s.mailer.NotifyUserAboutVacancy(ctx, vacancy.Name, applicantsForm.Email)
-	}()
+	_ = s.mailer.NotifyNewApplicant(ctx, vacancy.Name, resumeURL, applicantsForm)
+	_ = s.mailer.NotifyUserAboutVacancy(ctx, vacancy.Name, applicantsForm.Email)
 
 	return nil
 }

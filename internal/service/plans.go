@@ -19,29 +19,9 @@ func NewPlansService(repo postgres.Plan, mailer mailer.Notifier) *PlansService {
 	return &PlansService{repo: repo, mailer: mailer}
 }
 
-// CreatePlan saves the plan request to the DB and asynchronously notifies the
-// owner by email. SMTP errors are logged but do not fail the request.
+// CreatePlan saves the plan request to the DB and notifies the owner by
+// email. SMTP errors are ignored and do not fail the request.
 func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error) {
-	directionName := strconv.Itoa(int(plan.Direction))
-	name, err := s.repo.GetDirection(ctx, plan.Direction)
-	if name == "" {
-		if err != nil {
-			return nil, fmt.Errorf("plan_serivce.CreatePlan: failed to load direction: %w", err)
-		}
-		return nil, domain.ErrDirectionNotFound
-	}
-	directionName = name
-
-	go func() {
-		_ = s.mailer.NotifyNewPlan(ctx, &domain.CreatePlanInputEmail{
-			FullName:        plan.FullName,
-			TaskDescription: plan.TaskDescription,
-			Direction:       directionName,
-			EmailToFeedback: plan.EmailToFeedback,
-		})
-		_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)
-	}()
-
 	result, err := s.repo.CreatePlan(ctx, plan)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
@@ -52,6 +32,24 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 			return nil, fmt.Errorf("plan_service.CreatePlan.CreateLinkRequest: %w", err)
 		}
 	}
+
+	directionName := strconv.Itoa(int(plan.Direction))
+	name, err := s.repo.GetDirection(ctx, plan.Direction)
+	if name == "" {
+		if err != nil {
+			return nil, fmt.Errorf("plan_serivce.CreatePlan: failed to load direction: %w", err)
+		}
+		return nil, domain.ErrDirectionNotFound
+	}
+	directionName = name
+
+	_ = s.mailer.NotifyNewPlan(ctx, &domain.CreatePlanInputEmail{
+		FullName:        result.FullName,
+		TaskDescription: result.TaskDescription,
+		Direction:       directionName,
+		EmailToFeedback: plan.EmailToFeedback,
+	})
+	_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)
 
 	return result, nil
 }
