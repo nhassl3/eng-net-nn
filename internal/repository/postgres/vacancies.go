@@ -22,9 +22,6 @@ func NewVacanciesRepo(db *db.Store) *VacanciesRepo {
 }
 
 func (r *VacanciesRepo) List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	vacancies, err := r.db.GetVacancies(ctx, db.GetVacanciesParams{
 		Offset: offset,
 		Limit:  limit,
@@ -147,9 +144,6 @@ func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) err
 }
 
 func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	jds, err := r.db.GetJDs(ctx, db.GetJDsParams{
 		Limit:  limit,
 		Offset: offset,
@@ -242,10 +236,10 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 	return uuid2String(userRespondId), nil
 }
 
-func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
+func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error) {
 	respondVacancies, err := r.db.GetRespondVacancies(ctx, db.GetRespondVacanciesParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
 	if err != nil {
 		if mapped, ok := mapNotFound(err, domain.ErrRespondVacanciesNotExists); ok {
@@ -253,7 +247,13 @@ func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.Respon
 		}
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
 	}
-	return mapRespondVacancies(respondVacancies), nil
+
+	total, err := r.db.CountRespondVacancies(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
+	}
+
+	return mapRespondVacancies(respondVacancies, total), nil
 }
 
 func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
@@ -335,13 +335,14 @@ func mapJobDirection(jd db.JobDirection) domain.JobDirection {
 	}
 }
 
-func mapRespondVacancies(respondVacancies []db.UserRespond) *domain.RespondVacancies {
+func mapRespondVacancies(respondVacancies []db.UserRespond, total int64) *domain.RespondVacancies {
 	domainRespondVacancies := make([]domain.RespondVacancy, len(respondVacancies))
 	for i := range respondVacancies {
 		domainRespondVacancies[i] = mapRespondVacancy(respondVacancies[i])
 	}
 	return &domain.RespondVacancies{
 		RespondVacancies: domainRespondVacancies,
+		Total:            int(total),
 	}
 }
 
