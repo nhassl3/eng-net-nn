@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPlans = `-- name: CountPlans :one
+SELECT COUNT(*) FROM plans
+`
+
+func (q *Queries) CountPlans(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countPlans)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createLinkRequest = `-- name: CreateLinkRequest :exec
 INSERT INTO link_user_with_plan (user_id, plan_id) VALUES ($1, $2)
 `

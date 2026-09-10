@@ -25,3 +25,6 @@ SELECT name FROM directions WHERE id=$1 LIMIT 1;
 
 -- name: GetAllPlans :many
 SELECT * FROM plans LIMIT $1 OFFSET $2;
+
+-- name: CountPlans :one
+SELECT COUNT(*) FROM plans;

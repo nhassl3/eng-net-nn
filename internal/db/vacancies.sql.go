@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countRespondVacancies = `-- name: CountRespondVacancies :one
+SELECT COUNT(*) FROM user_responds
+`
+
+func (q *Queries) CountRespondVacancies(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countRespondVacancies)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createJobDirection = `-- name: CreateJobDirection :one
 INSERT INTO job_directions (name, tags, description) VALUES ($1::varchar, $2::text[], $3::text) RETURNING id, name, tags, description
 `

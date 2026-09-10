@@ -55,5 +55,8 @@ VALUES (
 -- name: GetRespondVacancies :many
 SELECT * FROM user_responds ORDER BY created_at DESC, id LIMIT $1 OFFSET $2;
 
+-- name: CountRespondVacancies :one
+SELECT COUNT(*) FROM user_responds;
+
 -- name: GetRespondVacancy :one
 SELECT * FROM user_responds WHERE id=$1 LIMIT 1;
