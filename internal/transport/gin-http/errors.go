@@ -52,7 +52,7 @@ func handleError(c *gin.Context, op string, err error) {
 		errors.Is(dmnErr, domain.ErrRespondVacanciesNotExists),
 		errors.Is(dmnErr, domain.ErrRespondVacancyNotExists):
 		log.Warn("request rejected: not found", logger.Op(op), logger.Err(dmnErr))
-		NewErrorResponseWithCode(c, http.StatusNotFound, dmnErr.Error(), errString(dmnErr.Error()))
+		NewErrorResponseWithCode(c, http.StatusNotFound, dmnErr.Code(), errString(dmnErr.Error()))
 
 	case errors.Is(dmnErr, domain.ErrFileTooLarge):
 		log.Warn("request rejected: file too large", logger.Op(op), logger.Err(dmnErr))
