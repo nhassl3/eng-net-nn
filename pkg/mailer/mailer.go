@@ -77,9 +77,10 @@ type job struct {
 }
 
 const (
-	queueSize   = 100
-	numWorkers  = 2
-	sendTimeout = 15 * time.Second
+	queueSize      = 100
+	numWorkers     = 2
+	sendTimeout    = 15 * time.Second
+	enqueueTimeout = 2 * time.Second
 )
 
 type SMTPMailer struct {
@@ -87,6 +88,8 @@ type SMTPMailer struct {
 	from       string
 	ownerEmail string
 	queue      chan job
+	closeCh    chan struct{}
+	closeOnce  sync.Once
 	wg         sync.WaitGroup
 	log        logger.Logger
 }
@@ -119,6 +122,7 @@ func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, 
 		from:       from,
 		ownerEmail: ownerEmail,
 		queue:      make(chan job, queueSize),
+		closeCh:    make(chan struct{}),
 		log:        log,
 	}
 
@@ -132,37 +136,66 @@ func NewSMTPMailer(host, username, password, from, ownerEmail string, port int, 
 
 func (m *SMTPMailer) worker() {
 	defer m.wg.Done()
-	for j := range m.queue {
-		ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
-		if j.toUser {
-			if err := m.sendToUser(ctx, j.subject, j.body, j.replyTo); err != nil {
-				m.log.Error("send to user failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
-			} else {
-				m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", true))
-			}
-		} else {
-			if err := m.sendToOwner(ctx, j.subject, j.body, j.replyTo); err != nil {
-				m.log.Error("send to owner failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
-			} else {
-				m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", false))
+	for {
+		select {
+		case j := <-m.queue:
+			m.handle(j)
+		case <-m.closeCh:
+			// Drain whatever is already queued, then exit. The queue channel
+			// itself is never closed, so this is the only shutdown signal.
+			for {
+				select {
+				case j := <-m.queue:
+					m.handle(j)
+				default:
+					return
+				}
 			}
 		}
-		cancel()
 	}
 }
 
-func (m *SMTPMailer) enqueue(j job) {
+func (m *SMTPMailer) handle(j job) {
+	ctx, cancel := context.WithTimeout(context.Background(), sendTimeout)
+	defer cancel()
+	if j.toUser {
+		if err := m.sendToUser(ctx, j.subject, j.body, j.replyTo); err != nil {
+			m.log.Error("send to user failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
+		} else {
+			m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", true))
+		}
+	} else {
+		if err := m.sendToOwner(ctx, j.subject, j.body, j.replyTo); err != nil {
+			m.log.Error("send to owner failed", logger.Op("SMTPMailer.worker"), logger.Err(err))
+		} else {
+			m.log.Info("email sent", logger.Op("SMTPMailer.worker"), logger.String("subject", j.subject), logger.Bool("to_user", false))
+		}
+	}
+}
+
+// enqueue submits j to the worker queue, waiting for space up to
+// enqueueTimeout (or until ctx is done, if sooner). It fails fast if the
+// mailer is already closed. This bounds how long a request handler can be
+// blocked by a full queue, since Notify* is called synchronously.
+func (m *SMTPMailer) enqueue(ctx context.Context, j job) error {
+	ctx, cancel := context.WithTimeout(ctx, enqueueTimeout)
+	defer cancel()
+
 	select {
 	case m.queue <- j:
-	default:
-		m.log.Error("queue full, notification dropped",
-			logger.Op("SMTPMailer.enqueue"), logger.String("subject", j.subject))
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("mailer.enqueue: %w", ctx.Err())
+	case <-m.closeCh:
+		return fmt.Errorf("mailer.enqueue: mailer is closed")
 	}
 }
 
-// Close drains the worker queue within the given context deadline.
+// Close stops accepting new work and drains the worker queue within the
+// given context deadline. The queue channel is never closed directly, so a
+// concurrent enqueue can never panic on a send to a closed channel.
 func (m *SMTPMailer) Close(ctx context.Context) error {
-	close(m.queue)
+	m.closeOnce.Do(func() { close(m.closeCh) })
 	done := make(chan struct{})
 	go func() {
 		m.wg.Wait()
@@ -209,7 +242,7 @@ func (m *SMTPMailer) send(ctx context.Context, msg *mail.Msg, subject, htmlBody 
 	return nil
 }
 
-func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, resumeUrl string, form *domain.ApplicantsFormInput) error {
+func (m *SMTPMailer) NotifyNewApplicant(ctx context.Context, vacancyName string, resumeUrl string, form *domain.ApplicantsFormInput) error {
 	subject := fmt.Sprintf("Новый отклик на вакансию: %s", vacancyName)
 	body, err := Render(NewApplicant, NewApplicantsFormInput{
 		VacancyName: vacancyName,
@@ -224,11 +257,10 @@ func (m *SMTPMailer) NotifyNewApplicant(_ context.Context, vacancyName string, r
 	if err != nil {
 		return fmt.Errorf("mailer.NotifyNewApplicant: %w", err)
 	}
-	m.enqueue(job{subject: subject, body: body, replyTo: form.Email})
-	return nil
+	return m.enqueue(ctx, job{subject: subject, body: body, replyTo: form.Email})
 }
 
-func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInputEmail) error {
+func (m *SMTPMailer) NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInputEmail) error {
 	body, err := Render(NewPlan, NewPlanFormInput{
 		Name:        plan.FullName,
 		Email:       plan.EmailToFeedback,
@@ -238,24 +270,21 @@ func (m *SMTPMailer) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanInp
 	if err != nil {
 		return fmt.Errorf("mailer.NotifyNewPlan: %w", err)
 	}
-	m.enqueue(job{subject: "Новая заявка на разработку плана", body: body, replyTo: plan.EmailToFeedback})
-	return nil
+	return m.enqueue(ctx, job{subject: "Новая заявка на разработку плана", body: body, replyTo: plan.EmailToFeedback})
 }
 
-func (m *SMTPMailer) NotifyUserAboutVacancy(_ context.Context, vacancyName, userEmail string) error {
+func (m *SMTPMailer) NotifyUserAboutVacancy(ctx context.Context, vacancyName, userEmail string) error {
 	body, err := Render(NotifyAboutVacancy, nil)
 	if err != nil {
 		return fmt.Errorf("mailer.NotifyUserAboutVacancy: %w", err)
 	}
-	m.enqueue(job{subject: fmt.Sprintf("Отклик на вакансию %s", vacancyName), body: body, replyTo: userEmail, toUser: true})
-	return nil
+	return m.enqueue(ctx, job{subject: fmt.Sprintf("Отклик на вакансию %s", vacancyName), body: body, replyTo: userEmail, toUser: true})
 }
 
-func (m *SMTPMailer) NotifyUserAboutPlan(_ context.Context, userEmail string) error {
+func (m *SMTPMailer) NotifyUserAboutPlan(ctx context.Context, userEmail string) error {
 	body, err := Render(NotifyAboutPlan, nil)
 	if err != nil {
 		return fmt.Errorf("mailer.NotifyUserAboutPlan: %w", err)
 	}
-	m.enqueue(job{subject: "Рассмотрение Вашего плана", body: body, replyTo: userEmail, toUser: true})
-	return nil
+	return m.enqueue(ctx, job{subject: "Рассмотрение Вашего плана", body: body, replyTo: userEmail, toUser: true})
 }
