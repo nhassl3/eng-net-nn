@@ -139,12 +139,13 @@ func (s *Server) New(cfg *config.Config, log logger.Logger) error {
 
 	// Formate http server
 	s.httpServer = &http.Server{
-		Addr:           cfg.HttpServer.Address,
-		MaxHeaderBytes: 1 << 20,
-		Handler:        handler.InitRoutes(cfg.Env, cfg.AllowOrigins),
-		ReadTimeout:    cfg.HttpServer.Timeout,
-		WriteTimeout:   cfg.HttpServer.Timeout,
-		IdleTimeout:    cfg.HttpServer.IdleTimeout,
+		Addr:              cfg.HttpServer.Address,
+		MaxHeaderBytes:    1 << 20,
+		Handler:           handler.InitRoutes(cfg.Env, cfg.AllowOrigins),
+		ReadHeaderTimeout: cfg.HttpServer.ReadHeaderTimeout,
+		ReadTimeout:       cfg.HttpServer.ReadTimeout,
+		WriteTimeout:      cfg.HttpServer.WriteTimeout,
+		IdleTimeout:       cfg.HttpServer.IdleTimeout,
 	}
 
 	return nil

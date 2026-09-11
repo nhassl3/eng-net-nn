@@ -30,9 +30,11 @@ type Log struct {
 }
 
 type HttpServer struct {
-	Address     string        `yaml:"address" env-default:"localhost:8080"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	Address           string        `yaml:"address" env-default:"localhost:8080"`
+	ReadHeaderTimeout time.Duration `yaml:"header_timeout" env-default:"5s"`
+	ReadTimeout       time.Duration `yaml:"read_timeout" env-default:"60s"`
+	WriteTimeout      time.Duration `yaml:"write_timeout" env-default:"60s"`
+	IdleTimeout       time.Duration `yaml:"idle_timeout" env-default:"120s"`
 }
 
 type DBSettings struct {
@@ -104,8 +106,10 @@ func Load(configFile, envFile string) (*Config, error) {
 	yv.SetDefault("env", "local")
 	yv.SetDefault("allow_origins", []string{"*"})
 	yv.SetDefault("http_server.address", "localhost:8080")
-	yv.SetDefault("http_server.timeout", 4*time.Second)
-	yv.SetDefault("http_server.idle_timeout", time.Minute)
+	yv.SetDefault("http_server.header_timeout", 5*time.Second)
+	yv.SetDefault("http_server.read_timeout", 1*time.Minute)
+	yv.SetDefault("http_server.write_timeout", 1*time.Minute)
+	yv.SetDefault("http_server.idle_timeout", 2*time.Minute)
 	yv.SetDefault("db.host", "localhost")
 	yv.SetDefault("db.port", "5432")
 	yv.SetDefault("db.username", "postgres")
@@ -151,7 +155,9 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.AllowOrigins = yv.GetStringSlice("allow_origins")
 
 	cfg.HttpServer.Address = yv.GetString("http_server.address")
-	cfg.HttpServer.Timeout = yv.GetDuration("http_server.timeout")
+	cfg.HttpServer.ReadHeaderTimeout = yv.GetDuration("http_server.header_timeout")
+	cfg.HttpServer.ReadTimeout = yv.GetDuration("http_server.read_timeout")
+	cfg.HttpServer.WriteTimeout = yv.GetDuration("http_server.write_timeout")
 	cfg.HttpServer.IdleTimeout = yv.GetDuration("http_server.idle_timeout")
 
 	cfg.DBSettings.Host = yv.GetString("db.host")
