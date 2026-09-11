@@ -5,8 +5,10 @@ allow_origins:
   - http://localhost:4173
 http_server:
   address: "0.0.0.0:8080"
-  timeout: 4s
-  idle_timeout: 60s
+  header_timeout: 5s;
+  read_timeout: 60s;
+  write_timeout: 60s;
+  idle_timeout: 120s;
 db:
   host: "postgres"
   port: 5432
