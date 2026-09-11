@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -40,7 +41,7 @@ func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) 
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		Username: stringToNullable(in.Username),
 		Email:    stringToNullable(in.Email),
-		ID:       uuidPtr2Nullable(in.ID),
+		ID:       uuidPtr2Nullable(strings.ToLower(in.ID)),
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("auth_repo.GetUserForLogin: %w", err)
