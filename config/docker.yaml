@@ -21,8 +21,6 @@ redis:
   db: 0
   ttl:
     user_profile: 1h
-    blacklist_access: 15m
-    blacklist_refresh: 168h
     auth_timeout: 5s
 token:
   access_ttl: 15m
