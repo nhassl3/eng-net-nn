@@ -18,7 +18,6 @@ import (
 const MaxFileSize = 10 << 20
 
 var allowedContentTypes = map[string]string{
-	"text/plain":         ".txt",
 	"text/rtf":           ".rtf",
 	"application/rtf":    ".rtf",
 	"application/pdf":    ".pdf",
