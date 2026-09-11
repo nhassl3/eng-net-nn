@@ -42,7 +42,7 @@ func (h *Handler) signIn(c *gin.Context) {
 	}
 
 	if input.Username == "" && input.Email == "" && input.ID == "" {
-		NewErrorResponse(c, http.StatusBadRequest, "username or email are required")
+		handleError(c, "signIn", domain.ErrInvalidParam)
 		return
 	}
 
