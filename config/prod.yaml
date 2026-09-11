@@ -12,7 +12,7 @@ db:
   port: 5436
   username: "ipbuild"
   dbname: "unet"
-  sslmode: "disable"
+  sslmode: "require"
 redis:
   username: "ipbuild-unet"
   address: "localhost:6380"
@@ -35,7 +35,7 @@ smtp:
 minio:
   endpoint: "localhost:9000"
   bucket: "unet-resume"
-  use_ssl: false
+  use_ssl: true
 log:
   level: "info"
   add_caller: true
