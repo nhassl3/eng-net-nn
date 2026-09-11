@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
@@ -116,5 +116,5 @@ func ResolveContentType(data []byte) (string, error) {
 // GenerateObjectName creates a unique object path for file storage.
 func GenerateObjectName(prefix, owner, contentType string) string {
 	ext := allowedContentTypes[contentType]
-	return filepath.Join(prefix, owner, uuid.NewString()+ext)
+	return path.Join(prefix, owner, uuid.NewString()+ext)
 }
