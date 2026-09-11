@@ -3,7 +3,10 @@ package service
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -19,7 +22,8 @@ const (
 	resumeEmailTTL = 7 * 24 * time.Hour
 	// resumeViewTTL is how long a résumé link returned to an admin via the API
 	// stays valid.
-	resumeViewTTL = 15 * time.Minute
+	resumeViewTTL          = 15 * time.Minute
+	resumeViewByCreatedTTL = 72 * time.Hour
 )
 
 type VacanciesService struct {
@@ -117,6 +121,11 @@ func (s *VacanciesService) DeleteJd(ctx context.Context, jdId int64) error {
 // Respond saves the applicant's form to the DB and notifies the owner by
 // email. SMTP errors are ignored and do not fail the request.
 func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applicantsForm *domain.ApplicantsFormInput, fileInput *domain.FileUploadInput) error {
+	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
+	if err != nil {
+		return fmt.Errorf("vacancies_service.Respond: failed to get vacancy %w", err)
+	}
+
 	// Detect the real content type from the bytes (the client header is not
 	// trusted) and validate size/type.
 	contentType, err := minio.ResolveContentType(fileInput.FileData)
@@ -124,12 +133,11 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 		return fmt.Errorf("vacancies_service.Respond.minio: failed to validate uploaded file: %w", err)
 	}
 
-	vacancy, err := s.repo.GetVacancy(ctx, vacancyId)
-	if err != nil {
-		return fmt.Errorf("vacancies_service.Respond: failed to get vacancy %w", err)
-	}
+	objectName := minio.GenerateObjectName("resumes/users", getShortEmailHash(applicantsForm.Email), contentType)
 
-	objectName := minio.GenerateObjectName("resumes/users", applicantsForm.Email, contentType)
+	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, objectName, applicantsForm); err != nil {
+		return fmt.Errorf("vacancies_service.Respond: %w", err)
+	}
 
 	if _, err := s.minioClient.Upload(
 		ctx, objectName, contentType, bytes.NewReader(fileInput.FileData), int64(len(fileInput.FileData)),
@@ -137,17 +145,8 @@ func (s *VacanciesService) Respond(ctx context.Context, vacancyId string, applic
 		return fmt.Errorf("vacancies_service.Respond.minio: failed to upload file: %w", err)
 	}
 
-	if _, err := s.repo.RespondToVacancy(ctx, vacancyId, objectName, applicantsForm); err != nil {
-		// Don't leave an orphaned object behind if persisting the response failed.
-		if delErr := s.minioClient.Delete(ctx, objectName); delErr != nil {
-			s.log.Error("cleanup orphaned object failed",
-				logger.Op("Respond"), logger.String("object", objectName), logger.Err(delErr))
-		}
-		return fmt.Errorf("vacancies_service.Respond: %w", err)
-	}
-
 	// A failed notification link must not fail the whole request.
-	resumeURL, err := s.minioClient.PresignedURL(ctx, objectName, resumeEmailTTL)
+	resumeURL, err := s.minioClient.PresignedURL(ctx, objectName, resumeViewByCreatedTTL)
 	if err != nil {
 		s.log.Warn("presign resume for email failed",
 			logger.Op("Respond"), logger.String("object", objectName), logger.Err(err))
@@ -173,6 +172,17 @@ func (s *VacanciesService) presignResume(ctx context.Context, rv *domain.Respond
 		return
 	}
 	rv.ResumeUrl = url
+}
+
+// getShortEmailHash converts string to hash-hex-16-sign string with normalized given credential
+func getShortEmailHash(email string) string {
+	normalized := strings.TrimSpace(strings.ToLower(email))
+
+	hashEmail := sha256.Sum256([]byte(normalized))
+
+	hexEmail := hex.EncodeToString(hashEmail[:])
+
+	return hexEmail[:16]
 }
 
 func (s *VacanciesService) GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error) {
