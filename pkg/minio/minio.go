@@ -22,6 +22,7 @@ var allowedContentTypes = map[string]string{
 	"application/rtf":    ".rtf",
 	"application/pdf":    ".pdf",
 	"application/msword": ".doc",
+	"application/vnd.oasis.opendocument.text":                                 ".odt",
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
 
