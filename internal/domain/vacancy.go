@@ -61,8 +61,8 @@ type RespondVacancy struct {
 	City        string    `json:"city"`
 	Exp         string    `json:"exp"`
 	Description string    `json:"description"`
-	ResumeUrl   string    `json:"resumeUrl"`
-	VacancyId   string    `json:"vacancyId"`
+	ResumeUrl   string    `json:"resume_url"`
+	VacancyId   string    `json:"vacancy_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
