@@ -42,6 +42,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.Token.Cookie.SameSite == "none" && cfg.Token.Cookie.Secure == true {
+		fmt.Fprint(os.Stdout, "set secure for cookie with same_site='none'\n")
+	}
+
 	log, err := logger.New(logger.Config{
 		Level:      cfg.Log.Level,
 		AddCaller:  cfg.Log.AddCaller,
