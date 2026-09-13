@@ -7,6 +7,12 @@ SELECT * FROM vacancy_with_jd WHERE
                             AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar)
                             AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('name')::varchar IS NOT NULL) LIMIT 1;
 
+-- name: GetVacancyForUpdate :one
+SELECT * FROM vacancy_with_jd WHERE
+                                (sqlc.narg('id')::uuid IS NULL OR id=sqlc.narg('id')::uuid)
+                                AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar)
+                                AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('name')::varchar IS NOT NULL) LIMIT 1 FOR UPDATE;
+
 -- name: CreateVacancy :one
 INSERT INTO vacancies (jd, name, description, required_exp, pay_day, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
 
