@@ -31,6 +31,7 @@ type Querier interface {
 	GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUserPlanRow, error)
 	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error)
 	GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error)
+	GetVacancyForUpdate(ctx context.Context, arg GetVacancyForUpdateParams) (VacancyWithJd, error)
 	IsAdmin(ctx context.Context, dollar_1 uuid.UUID) (bool, error)
 	RemoveAdmin(ctx context.Context, dollar_1 uuid.UUID) error
 	RemoveJobDirection(ctx context.Context, id int64) error
