@@ -45,16 +45,15 @@ func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*doma
 }
 
 func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
-	payDay := 0.0
-	if params.PayDay != nil {
-		payDay = *params.PayDay
+	if params.PayDay == nil || *params.PayDay <= 0 {
+		return nil, domain.ErrInvalidParam
 	}
 	vacancy, err := r.db.CreateVacancy(ctx, db.CreateVacancyParams{
 		Jd:          params.Jd,
 		Name:        stringToNullable(params.Name),
 		Description: stringToNullable(params.Description),
 		RequiredExp: stringPtrToNullable(params.RequiredExp),
-		PayDay:      payDay,
+		PayDay:      *params.PayDay,
 		Skills:      params.Skills,
 	})
 	if err != nil {
