@@ -3,6 +3,7 @@ package gin_http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -141,10 +142,14 @@ func (h *Handler) clearRefreshCookie(c *gin.Context) {
 }
 
 func setSameSite(c *gin.Context, sameSite string) {
-	switch sameSite {
+	switch strings.TrimSpace(strings.ToLower(sameSite)) {
 	case "lax":
 		c.SetSameSite(http.SameSiteLaxMode)
-	default:
+	case "strict":
+		c.SetSameSite(http.SameSiteStrictMode)
+	case "none":
 		c.SetSameSite(http.SameSiteNoneMode)
+	default:
+		c.SetSameSite(http.SameSiteDefaultMode)
 	}
 }
