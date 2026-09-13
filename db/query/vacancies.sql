@@ -40,7 +40,10 @@ SELECT * FROM job_directions WHERE id=sqlc.arg('id')::bigint LIMIT 1;
 INSERT INTO job_directions (name, tags, description) VALUES (sqlc.arg('name')::varchar, sqlc.arg('tags')::text[], sqlc.arg('description')::text) RETURNING *;
 
 -- name: UpdateJobDirection :one
-UPDATE job_directions SET name=sqlc.narg('name')::varchar, tags=sqlc.narg('tags')::text[], description=sqlc.narg('description')::text
+UPDATE job_directions SET
+                          name=COALESCE(sqlc.narg('name')::varchar, name),
+                            tags=COALESCE(sqlc.narg('tags')::text[], tags),
+                            description=COALESCE(sqlc.narg('description')::text, description)
                       WHERE id=sqlc.arg('id')::bigint RETURNING *;
 
 -- name: RemoveJobDirection :exec
