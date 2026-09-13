@@ -187,6 +187,11 @@ func Load(configFile, envFile string) (*Config, error) {
 	cfg.Token.Cookie.Secure = yv.GetBool("token.cookie.secure")
 	cfg.Token.Cookie.SameSite = yv.GetString("token.cookie.same_site")
 
+	// Must step (if same_site="none" => secure=true)
+	if cfg.Token.Cookie.SameSite == "none" {
+		cfg.Token.Cookie.Secure = true
+	}
+
 	cfg.SMTP.Host = yv.GetString("smtp.host")
 	cfg.SMTP.Port = yv.GetInt("smtp.port")
 	cfg.SMTP.Username = ev.GetString("SMTP_USERNAME")
