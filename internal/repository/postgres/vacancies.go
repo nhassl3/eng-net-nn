@@ -79,7 +79,7 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 			fnErr               error
 		)
 
-		vacancy, fnErr := q.GetVacancy(ctx, db.GetVacancyParams{
+		vacancy, fnErr := q.GetVacancyForUpdate(ctx, db.GetVacancyForUpdateParams{
 			ID: uuid,
 		})
 		if fnErr != nil {
