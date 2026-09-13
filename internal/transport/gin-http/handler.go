@@ -49,7 +49,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
 	// One list for both CORS and the cross-site guard, so an origin can never
 	// be allowed by one and rejected by the other.
-	origins := append(append([]string{}, allowOrigins...), "http://localhost:3000")
+	origins := append(append([]string{}, allowOrigins...))
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: origins,
