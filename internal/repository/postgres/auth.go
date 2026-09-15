@@ -70,7 +70,7 @@ func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domai
 func mapUser(user db.User) domain.User {
 	return domain.User{
 		UUID:      uuid2String(user.ID),
-		Role:      user.Role.String,
+		Role:      "",
 		Username:  user.Username,
 		FullName:  user.FullName.String,
 		Email:     user.Email,
