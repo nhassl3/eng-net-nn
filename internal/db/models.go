@@ -64,7 +64,6 @@ type User struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	HashedPassword string             `json:"hashed_password"`
-	Role           pgtype.Text        `json:"role"`
 }
 
 type UserRespond struct {

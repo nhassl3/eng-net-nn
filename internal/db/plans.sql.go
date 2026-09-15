@@ -114,7 +114,7 @@ func (q *Queries) GetResponseFromRequest(ctx context.Context, planID uuid.UUID) 
 }
 
 const getUserPlan = `-- name: GetUserPlan :one
-SELECT p.id, p.full_name, p.direction, p.task_description, p.email, p.created_at, u.id, u.username, u.full_name, u.email, u.created_at, u.updated_at, u.hashed_password, u.role
+SELECT p.id, p.full_name, p.direction, p.task_description, p.email, p.created_at, u.id, u.username, u.full_name, u.email, u.created_at, u.updated_at, u.hashed_password
 FROM plans p
     INNER JOIN link_user_with_plan up ON p.id=up.plan_id
     INNER JOIN users u ON up.user_id=u.id
@@ -150,7 +150,6 @@ func (q *Queries) GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUs
 		&i.User.CreatedAt,
 		&i.User.UpdatedAt,
 		&i.User.HashedPassword,
-		&i.User.Role,
 	)
 	return i, err
 }
