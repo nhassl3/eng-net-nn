@@ -12,7 +12,7 @@ import (
 )
 
 const addAdmin = `-- name: AddAdmin :exec
-INSERT INTO admins (user_id) VALUES ($1::uuid) ON CONFLICT DO NOTHING
+INSERT INTO admins (user_id) VALUES ($1::uuid)
 `
 
 func (q *Queries) AddAdmin(ctx context.Context, dollar_1 uuid.UUID) error {

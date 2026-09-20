@@ -79,6 +79,6 @@ func NewService(
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
 		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient, log.Named("vacancies")),
 		Plan:          NewPlansService(repos.Plan, mailer),
-		Admin:         NewAdminService(repos.Admin, repos.Partner),
+		Admin:         NewAdminService(repos.Admin),
 	}
 }

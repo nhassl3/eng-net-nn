@@ -36,7 +36,25 @@ func (r *AdminRepo) AddAdmin(ctx context.Context, userID string) error {
 	}
 
 	if err := r.db.AddAdmin(ctx, id); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrUserAlreadyHasRole); ok {
+			return mapped
+		}
 		return fmt.Errorf("admin_repo.AddAdmin: %w", err)
+	}
+	return nil
+}
+
+func (r *AdminRepo) AddPartner(ctx context.Context, userUID string) error {
+	id, err := string2UUID(userUID)
+	if err != nil {
+		return domain.ErrUserNotExists
+	}
+
+	if err := r.db.AddPartner(ctx, id); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrUserAlreadyHasRole); ok {
+			return mapped
+		}
+		return fmt.Errorf("add partner error: %w", err)
 	}
 	return nil
 }

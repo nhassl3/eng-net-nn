@@ -41,6 +41,8 @@ func mapConstraintErr(err error, alreadyExistsErr error) (mapped error, ok bool)
 		}
 	case "23502", "23514":
 		return domain.ErrInvalidInput, true
+	case "P0001":
+		return domain.ErrUserAlreadyHasRole, true
 	}
 	return err, false
 }

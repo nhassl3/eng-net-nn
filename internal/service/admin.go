@@ -8,14 +8,12 @@ import (
 )
 
 type AdminService struct {
-	adminRepo   postgres.Admin
-	partnerRepo postgres.Partner
+	adminRepo postgres.Admin
 }
 
-func NewAdminService(adminRepo postgres.Admin, partnerRepo postgres.Partner) *AdminService {
+func NewAdminService(adminRepo postgres.Admin) *AdminService {
 	return &AdminService{
-		adminRepo:   adminRepo,
-		partnerRepo: partnerRepo,
+		adminRepo: adminRepo,
 	}
 }
 
@@ -27,7 +25,7 @@ func (svc *AdminService) AddAdmin(ctx context.Context, userUID string) error {
 }
 
 func (svc *AdminService) AddPartner(ctx context.Context, userUID string) error {
-	if err := svc.partnerRepo.AddPartner(ctx, userUID); err != nil {
+	if err := svc.adminRepo.AddPartner(ctx, userUID); err != nil {
 		return fmt.Errorf("service.partner: AddPartner: failed to create new partner: %w", err)
 	}
 	return nil

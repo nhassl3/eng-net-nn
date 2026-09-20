@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION check_single_role() RETURNS trigger AS $$
            END IF;
         ELSIF TG_TABLE_NAME='partners' THEN
               IF EXISTS (SELECT 1 FROM admins WHERE user_id=NEW.user_id) THEN
-                RAISE EXCEPTION 'user % is already a admin', NEW.user_id;
+                RAISE EXCEPTION 'user % is already an admin', NEW.user_id;
               END IF;
         END IF;
         RETURN NEW;

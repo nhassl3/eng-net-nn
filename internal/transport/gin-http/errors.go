@@ -32,7 +32,8 @@ func handleError(c *gin.Context, op string, err error) {
 		errors.Is(dmnErr, domain.ErrPlanRequestAlreadyExists),
 		errors.Is(dmnErr, domain.ErrRespondAlreadyExists),
 		errors.Is(dmnErr, domain.ErrVacancyAlreadyExists),
-		errors.Is(dmnErr, domain.ErrDirectionHasVacancies):
+		errors.Is(dmnErr, domain.ErrDirectionHasVacancies),
+		errors.Is(dmnErr, domain.ErrUserAlreadyHasRole):
 		log.Warn("request rejected: conflict", logger.Op(op), logger.Err(dmnErr))
 		NewErrorResponseWithCode(c, http.StatusConflict, dmnErr.Code(), errString(dmnErr.Error()))
 

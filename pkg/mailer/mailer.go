@@ -69,6 +69,16 @@ func (n *NoopNotifier) NotifyNewPlan(_ context.Context, plan *domain.CreatePlanI
 	return nil
 }
 
+func (n *NoopNotifier) NotifyUserAboutCode(_ context.Context, code string) error {
+	n.log.Info("noop: notify user about code", logger.String("code", code))
+	return nil
+}
+
+func (n *NoopNotifier) NotifyUserAboutResponseToPlan(_ context.Context, userEmail, message string) error {
+	n.log.Info("noop: notify user about response to the plan", logger.String("email", userEmail), logger.String("message", message))
+	return nil
+}
+
 func (n *NoopNotifier) Close(_ context.Context) error { return nil }
 
 type job struct {
@@ -195,7 +205,7 @@ func (m *SMTPMailer) enqueue(ctx context.Context, j job) error {
 
 // Close stops accepting new work and drains the worker queue within the
 // given context deadline. The queue channel is never closed directly, so a
-// concurrent enqueue can never panic on a send to a closed channel.
+// concurrent enqueue can never panic on send to a closed channel.
 func (m *SMTPMailer) Close(ctx context.Context) error {
 	m.closeOnce.Do(func() { close(m.closeCh) })
 	done := make(chan struct{})
