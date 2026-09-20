@@ -53,7 +53,9 @@ type Plan struct {
 	Direction       int32              `json:"direction"`
 	TaskDescription pgtype.Text        `json:"task_description"`
 	Email           string             `json:"email"`
+	Active          bool               `json:"active"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

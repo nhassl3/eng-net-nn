@@ -38,6 +38,7 @@ type Querier interface {
 	RemoveVacancy(ctx context.Context, arg RemoveVacancyParams) error
 	RequestPlan(ctx context.Context, arg RequestPlanParams) (Plan, error)
 	RespondToVacancy(ctx context.Context, arg RespondToVacancyParams) (uuid.UUID, error)
+	ResponseToPlan(ctx context.Context, id uuid.UUID) (Plan, error)
 	UpdateJobDirection(ctx context.Context, arg UpdateJobDirectionParams) (JobDirection, error)
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (User, error)
 	UpdateVacancy(ctx context.Context, arg UpdateVacancyParams) (Vacancy, error)

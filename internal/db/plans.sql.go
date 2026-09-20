@@ -38,7 +38,7 @@ func (q *Queries) CreateLinkRequest(ctx context.Context, arg CreateLinkRequestPa
 }
 
 const getAllPlans = `-- name: GetAllPlans :many
-SELECT id, full_name, direction, task_description, email, created_at FROM plans LIMIT $1 OFFSET $2
+SELECT id, full_name, direction, task_description, email, active, created_at, updated_at FROM plans LIMIT $1 OFFSET $2
 `
 
 type GetAllPlansParams struct {
@@ -61,7 +61,9 @@ func (q *Queries) GetAllPlans(ctx context.Context, arg GetAllPlansParams) ([]Pla
 			&i.Direction,
 			&i.TaskDescription,
 			&i.Email,
+			&i.Active,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -85,7 +87,7 @@ func (q *Queries) GetDirection(ctx context.Context, id int32) (pgtype.Text, erro
 }
 
 const getPlan = `-- name: GetPlan :one
-SELECT id, full_name, direction, task_description, email, created_at FROM plans WHERE id=$1 LIMIT 1
+SELECT id, full_name, direction, task_description, email, active, created_at, updated_at FROM plans WHERE id=$1 LIMIT 1
 `
 
 func (q *Queries) GetPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
@@ -97,7 +99,9 @@ func (q *Queries) GetPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
 		&i.Direction,
 		&i.TaskDescription,
 		&i.Email,
+		&i.Active,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -114,7 +118,7 @@ func (q *Queries) GetResponseFromRequest(ctx context.Context, planID uuid.UUID) 
 }
 
 const getUserPlan = `-- name: GetUserPlan :one
-SELECT p.id, p.full_name, p.direction, p.task_description, p.email, p.created_at, u.id, u.username, u.full_name, u.email, u.created_at, u.updated_at, u.hashed_password
+SELECT p.id, p.full_name, p.direction, p.task_description, p.email, p.active, p.created_at, p.updated_at, u.id, u.username, u.full_name, u.email, u.created_at, u.updated_at, u.hashed_password
 FROM plans p
     INNER JOIN link_user_with_plan up ON p.id=up.plan_id
     INNER JOIN users u ON up.user_id=u.id
@@ -142,7 +146,9 @@ func (q *Queries) GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUs
 		&i.Plan.Direction,
 		&i.Plan.TaskDescription,
 		&i.Plan.Email,
+		&i.Plan.Active,
 		&i.Plan.CreatedAt,
+		&i.Plan.UpdatedAt,
 		&i.User.ID,
 		&i.User.Username,
 		&i.User.FullName,
@@ -155,7 +161,7 @@ func (q *Queries) GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUs
 }
 
 const requestPlan = `-- name: RequestPlan :one
-INSERT INTO plans (full_name, direction, task_description, email) VALUES ($1, $2, $3, $4) RETURNING id, full_name, direction, task_description, email, created_at
+INSERT INTO plans (full_name, direction, task_description, email) VALUES ($1, $2, $3, $4) RETURNING id, full_name, direction, task_description, email, active, created_at, updated_at
 `
 
 type RequestPlanParams struct {
@@ -179,7 +185,29 @@ func (q *Queries) RequestPlan(ctx context.Context, arg RequestPlanParams) (Plan,
 		&i.Direction,
 		&i.TaskDescription,
 		&i.Email,
+		&i.Active,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const responseToPlan = `-- name: ResponseToPlan :one
+UPDATE plans SET active=false, updated_at=now() WHERE id=$1 RETURNING id, full_name, direction, task_description, email, active, created_at, updated_at
+`
+
+func (q *Queries) ResponseToPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
+	row := q.db.QueryRow(ctx, responseToPlan, id)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.FullName,
+		&i.Direction,
+		&i.TaskDescription,
+		&i.Email,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
