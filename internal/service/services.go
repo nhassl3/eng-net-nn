@@ -53,10 +53,16 @@ type Plan interface {
 	ResponseToPlan(ctx context.Context, planUID, message string) (*domain.Plan, error)
 }
 
+type Admin interface {
+	AddAdmin(ctx context.Context, userUID string) error
+	AddPartner(ctx context.Context, userUID string) error
+}
+
 type Service struct {
 	Authorization
 	Vacancies
 	Plan
+	Admin
 }
 
 func NewService(
@@ -73,5 +79,6 @@ func NewService(
 		Authorization: NewAuthService(repos.Authorization, repos.Admin, authRedis, accessMaker, refreshMaker, blacklist),
 		Vacancies:     NewVacanciesService(repos.Vacancies, mailer, minioClient, log.Named("vacancies")),
 		Plan:          NewPlansService(repos.Plan, mailer),
+		Admin:         NewAdminService(repos.Admin, repos.Partner),
 	}
 }

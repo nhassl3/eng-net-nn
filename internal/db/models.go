@@ -47,6 +47,11 @@ type LinkUserWithPlan struct {
 	PlanID uuid.UUID `json:"plan_id"`
 }
 
+type Partner struct {
+	UserID    uuid.UUID          `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Plan struct {
 	ID              uuid.UUID          `json:"id"`
 	FullName        pgtype.Text        `json:"full_name"`

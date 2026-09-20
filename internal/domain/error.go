@@ -26,6 +26,7 @@ const (
 	EmptyData                = "EMPTY_DATA"
 	Unauthorized             = "UNAUTHORIZED"
 	InvalidInput             = "INVALID_INPUT"
+	AlreadyHasRole           = "ALREADY_HAS_ROLE"
 )
 
 type DomainError struct {
@@ -71,4 +72,5 @@ var (
 	ErrEmptyData                 = newError(EmptyData, "empty data")
 	ErrUnauthorized              = newError(Unauthorized, "unauthorized")
 	ErrInvalidInput              = newError(InvalidInput, "invalid input: violates a database constraint")
+	ErrUserAlreadyHasRole        = newError(AlreadyHasRole, "user already has role")
 )

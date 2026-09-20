@@ -108,6 +108,9 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 		admin := api.Group("/admin", h.middleware.UserIdentity, h.middleware.AdminIdentity)
 		{
+			admin.POST("/add_admin/:id", h.addAdmin)     // UID of the user
+			admin.POST("/add_partner/:id", h.addPartner) // UID of the user
+
 			vacanciesAdmin := admin.Group("/vacancies")
 			{
 				vacanciesAdmin.POST("/", h.createVacancy)

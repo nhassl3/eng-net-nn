@@ -13,6 +13,7 @@ import (
 
 type Querier interface {
 	AddAdmin(ctx context.Context, dollar_1 uuid.UUID) error
+	AddPartner(ctx context.Context, dollar_1 uuid.UUID) error
 	CountPlans(ctx context.Context) (int64, error)
 	CountRespondVacancies(ctx context.Context) (int64, error)
 	CreateJobDirection(ctx context.Context, arg CreateJobDirectionParams) (JobDirection, error)

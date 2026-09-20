@@ -48,17 +48,23 @@ type Plan interface {
 	ResponseToPlan(ctx context.Context, planUID string) (*domain.Plan, error)
 }
 
+type Partner interface {
+	AddPartner(ctx context.Context, userUID string) error
+}
+
 type Repository struct {
 	Authorization
 	Admin
 	Vacancies
 	Plan
+	Partner
 }
 
 func NewRepository(db *db.Store) *Repository {
 	return &Repository{
 		Authorization: NewAuthRepo(db),
 		Admin:         NewAdminRepo(db),
+		Partner:       NewPartnerRepo(db),
 		Vacancies:     NewVacanciesRepo(db),
 		Plan:          NewPlanRepo(db),
 	}
