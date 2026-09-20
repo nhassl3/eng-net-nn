@@ -45,6 +45,7 @@ type Plan interface {
 	GetDirection(ctx context.Context, directionId int32) (string, error)
 	CreateLinkRequest(ctx context.Context, userId, planId string) error
 	GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error)
+	ResponseToPlan(ctx context.Context, planUID string) (*domain.Plan, error)
 }
 
 type Repository struct {

@@ -132,7 +132,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 			{
 				planAdmin.GET("/", h.getAllPlans)
 				planAdmin.GET("/:id", h.getPlan)
-				// TODO: POST response to plan
+				planAdmin.POST("/", h.responseToPlan)
 			}
 		}
 	}

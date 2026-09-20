@@ -50,6 +50,7 @@ type Plan interface {
 	GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error)
 	GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error)
 	GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error)
+	ResponseToPlan(ctx context.Context, planUID, message string) (*domain.Plan, error)
 }
 
 type Service struct {

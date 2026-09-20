@@ -74,3 +74,13 @@ func (s *PlansService) GetAllPlans(ctx context.Context, limit, offset int32) (*d
 	}
 	return result, nil
 }
+
+func (s *PlansService) ResponseToPlan(ctx context.Context, planUID, message string) (*domain.Plan, error) {
+	// TODO: send email with message about consideration of the plan
+
+	result, err := s.repo.ResponseToPlan(ctx, planUID)
+	if err != nil {
+		return nil, fmt.Errorf("plan_service.ResponseToPlan: %w", err)
+	}
+	return result, err
+}

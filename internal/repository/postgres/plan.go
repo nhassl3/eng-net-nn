@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
@@ -140,6 +142,21 @@ func (r *PlanRepo) GetAllPlans(ctx context.Context, limit, offset int32) (*domai
 	}
 
 	return mapPlans(allUsersPlans, total), nil
+}
+
+func (r *PlanRepo) ResponseToPlan(ctx context.Context, planUID string) (*domain.Plan, error) {
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrInvalidParam
+	}
+	updatedPlan, err := r.db.ResponseToPlan(ctx, planID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrPlanRequestNotExists
+		}
+		return nil, fmt.Errorf("plan_repository.ResponseToPlan: %w", err)
+	}
+	return new(mapPlan(updatedPlan)), nil
 }
 
 func mapPlan(plan db.Plan) domain.Plan {
