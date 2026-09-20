@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nhassl3/IpBuild-backend/internal/db"
+	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
 
 type AdminRepo struct {
@@ -16,7 +17,12 @@ func NewAdminRepo(db *db.Store) *AdminRepo {
 }
 
 func (r *AdminRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	ok, err := r.db.IsAdmin(ctx, string2UUID(userID))
+	id, err := string2UUID(userID)
+	if err != nil {
+		return false, domain.ErrUserNotExists
+	}
+
+	ok, err := r.db.IsAdmin(ctx, id)
 	if err != nil {
 		return false, fmt.Errorf("admin_repo.IsAdmin: %w", err)
 	}
@@ -24,8 +30,31 @@ func (r *AdminRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
 }
 
 func (r *AdminRepo) AddAdmin(ctx context.Context, userID string) error {
-	if err := r.db.AddAdmin(ctx, string2UUID(userID)); err != nil {
+	id, err := string2UUID(userID)
+	if err != nil {
+		return domain.ErrUserNotExists
+	}
+
+	if err := r.db.AddAdmin(ctx, id); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrUserAlreadyHasRole); ok {
+			return mapped
+		}
 		return fmt.Errorf("admin_repo.AddAdmin: %w", err)
+	}
+	return nil
+}
+
+func (r *AdminRepo) AddPartner(ctx context.Context, userUID string) error {
+	id, err := string2UUID(userUID)
+	if err != nil {
+		return domain.ErrUserNotExists
+	}
+
+	if err := r.db.AddPartner(ctx, id); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrUserAlreadyHasRole); ok {
+			return mapped
+		}
+		return fmt.Errorf("add partner error: %w", err)
 	}
 	return nil
 }

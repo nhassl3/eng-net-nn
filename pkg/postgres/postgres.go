@@ -3,6 +3,9 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -89,6 +92,7 @@ func NewPool(ctx context.Context, dsn string, log logger.Logger, opts ...Options
 	cfg.MaxConnLifetime = o.MaxConnLifeTime
 	cfg.MaxConnIdleTime = o.MaxConnIdleTime
 	cfg.HealthCheckPeriod = o.HealthCheckPeriod
+	cfg.PingTimeout = o.ConnectTimeout
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
@@ -103,5 +107,12 @@ func NewPool(ctx context.Context, dsn string, log logger.Logger, opts ...Options
 }
 
 func DSN(host string, port int, user, password, dbName, sslMode string) string {
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", user, password, host, port, dbName, sslMode)
+	postgresURL := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     net.JoinHostPort(host, strconv.Itoa(port)),
+		Path:     dbName,
+		RawQuery: fmt.Sprintf("sslmode=%s", sslMode),
+	}
+	return postgresURL.String()
 }

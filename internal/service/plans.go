@@ -2,12 +2,8 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strconv"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 	"github.com/nhassl3/IpBuild-backend/internal/repository/postgres"
 	"github.com/nhassl3/IpBuild-backend/pkg/mailer"
@@ -22,10 +18,20 @@ func NewPlansService(repo postgres.Plan, mailer mailer.Notifier) *PlansService {
 	return &PlansService{repo: repo, mailer: mailer}
 }
 
-// CreatePlan saves the plan request to the DB and asynchronously notifies the
-// owner by email. SMTP errors are logged but do not fail the request.
+// CreatePlan saves the plan request to the DB and notifies the owner by
+// email. SMTP errors are ignored and do not fail the request.
 func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanInput, userId *string) (*domain.Plan, error) {
-	directionName := strconv.Itoa(int(plan.Direction))
+	result, err := s.repo.CreatePlan(ctx, plan)
+	if err != nil {
+		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
+	}
+
+	if userId != nil && *userId != "" {
+		if err := s.repo.CreateLinkRequest(ctx, *userId, result.UUID); err != nil {
+			return nil, fmt.Errorf("plan_service.CreatePlan.CreateLinkRequest: %w", err)
+		}
+	}
+
 	name, err := s.repo.GetDirection(ctx, plan.Direction)
 	if name == "" {
 		if err != nil {
@@ -33,62 +39,48 @@ func (s *PlansService) CreatePlan(ctx context.Context, plan *domain.CreatePlanIn
 		}
 		return nil, domain.ErrDirectionNotFound
 	}
-	directionName = name
 
-	go func() {
-		_ = s.mailer.NotifyNewPlan(ctx, &domain.CreatePlanInputEmail{
-			FullName:        plan.FullName,
-			TaskDescription: plan.TaskDescription,
-			Direction:       directionName,
-			EmailToFeedback: plan.EmailToFeedback,
-		})
-		_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)
-	}()
-
-	var pgErr *pgconn.PgError
-
-	result, err := s.repo.CreatePlan(ctx, plan)
-	if err != nil {
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return nil, domain.ErrPlanRequestAlreadyExists
-			}
-		}
-		return nil, fmt.Errorf("plan_service.CreatePlan: %w", err)
-	}
-
-	if userId != nil && *userId != "" {
-		if err := s.repo.CreateLinkRequest(ctx, *userId, result.UUID); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return nil, domain.ErrPlanRequestNotExists
-			} else if errors.As(err, &pgErr) {
-				if pgErr.Code == "23505" {
-					return nil, domain.ErrPlanRequestAlreadyExists
-				}
-				// TODO: add new errors with new code (constraint errors)
-			}
-			return nil, fmt.Errorf("plan_service.CreatePlan.CreateLinkRequest: %w", err)
-		}
-	}
+	_ = s.mailer.NotifyNewPlan(ctx, &domain.CreatePlanInputEmail{
+		FullName:        result.FullName,
+		TaskDescription: result.TaskDescription,
+		Direction:       name,
+		EmailToFeedback: plan.EmailToFeedback,
+	})
+	_ = s.mailer.NotifyUserAboutPlan(ctx, plan.EmailToFeedback)
 
 	return result, nil
 }
 
-func (s *PlansService) GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error) {
-	result, err := s.repo.GetPlan(ctx, planId)
+func (s *PlansService) GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error) {
+	result, err := s.repo.GetUserPlan(ctx, planUID, userUID)
 	if err != nil {
 		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
 	}
 	return result, nil
 }
 
-func (s *PlansService) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
-	result, err := s.repo.GetAllPlans(ctx)
+func (s *PlansService) GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error) {
+	result, err := s.repo.GetPlan(ctx, planUID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, domain.ErrPlanRequestNotExists
-		}
+		return nil, fmt.Errorf("plan_service.GetPlan: %w", err)
+	}
+	return result, nil
+}
+
+func (s *PlansService) GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error) {
+	result, err := s.repo.GetAllPlans(ctx, limit, offset)
+	if err != nil {
 		return nil, fmt.Errorf("plan_service.GetAllPlans: %w", err)
 	}
 	return result, nil
+}
+
+func (s *PlansService) ResponseToPlan(ctx context.Context, planUID, message string) (*domain.Plan, error) {
+	// TODO: send email with message about consideration of the plan
+
+	result, err := s.repo.ResponseToPlan(ctx, planUID)
+	if err != nil {
+		return nil, fmt.Errorf("plan_service.ResponseToPlan: %w", err)
+	}
+	return result, err
 }

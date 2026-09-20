@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -36,10 +37,11 @@ func (s *Store) ExecTx(ctx context.Context, fn func(*Queries) error) error {
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	if err := fn(s.WithTx(tx)); err != nil {
+		errTx := fmt.Errorf("executing transaction: %w", err)
 		if rbErr := tx.Rollback(ctx); rbErr != nil {
-			return fmt.Errorf("rolling back transaction: %w", rbErr)
+			return fmt.Errorf("rolling back transaction: %w", errors.Join(errTx, rbErr))
 		}
-		return fmt.Errorf("executing transaction: %w", err)
+		return errTx
 	}
 
 	return tx.Commit(ctx)

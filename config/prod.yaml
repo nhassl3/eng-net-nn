@@ -2,23 +2,23 @@ env: "prod"
 allow_origins:
   - https://eng-net-nn-frontend.vercel.app
 http_server:
-  address: "localhost:8000"
-  timeout: 5s
-  idle_timeout: 30s
+  address: "domain.com"
+  header_timeout: 5s;
+  read_timeout: 60s;
+  write_timeout: 60s;
+  idle_timeout: 120s;
 db:
   host: "localhost"
   port: 5436
   username: "ipbuild"
   dbname: "unet"
-  sslmode: "disable"
+  sslmode: "require"
 redis:
   username: "ipbuild-unet"
   address: "localhost:6380"
   db: 0
   ttl:
     user_profile: 1h
-    blacklist_access: 15m
-    blacklist_refresh: 168h
     auth_timeout: 5m
 token:
   access_ttl: 15m
@@ -35,7 +35,7 @@ smtp:
 minio:
   endpoint: "localhost:9000"
   bucket: "unet-resume"
-  use_ssl: false
+  use_ssl: true
 log:
   level: "info"
   add_caller: true

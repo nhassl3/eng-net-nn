@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
@@ -21,7 +21,7 @@ func NewAuthRepo(db *db.Store) *AuthRepo {
 
 func (r *AuthRepo) CreateUser(ctx context.Context, params domain.CreateUserInput) (*domain.User, error) {
 	user, err := r.db.CreateUser(ctx, db.CreateUserParams{
-		Username:       stringToNullable(params.Username),
+		Username:       params.Username,
 		FullName:       stringToNullable(params.FullName),
 		Email:          params.Email,
 		HashedPassword: params.Password,
@@ -34,10 +34,14 @@ func (r *AuthRepo) CreateUser(ctx context.Context, params domain.CreateUserInput
 
 // GetUserForLogin fetches the user and their stored password hash for login verification.
 func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) (*domain.User, string, error) {
+	if in.ID == "" && in.Username == "" && in.Email == "" {
+		return nil, "", fmt.Errorf("auth_repo.GetUserForLogin: %w", domain.ErrInvalidParam)
+	}
+
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		Username: stringToNullable(in.Username),
 		Email:    stringToNullable(in.Email),
-		ID:       uuidPtr2Nullable(in.ID),
+		ID:       uuidPtr2Nullable(strings.ToLower(in.ID)),
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("auth_repo.GetUserForLogin: %w", err)
@@ -46,6 +50,12 @@ func (r *AuthRepo) GetUserForLogin(ctx context.Context, in *domain.SignInInput) 
 }
 
 func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domain.User, error) {
+	if (params.UUID == nil || *params.UUID == "") &&
+		(params.Email == nil || *params.Email == "") &&
+		(params.Username == nil || *params.Username == "") {
+		return nil, fmt.Errorf("auth_repo.GetMe: %w", domain.ErrInvalidParam)
+	}
+
 	user, err := r.db.GetUser(ctx, db.GetUserParams{
 		ID:       nUUIDPtr2Nullable(params.UUID),
 		Email:    stringPtrToNullable(params.Email),
@@ -60,11 +70,11 @@ func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domai
 func mapUser(user db.User) domain.User {
 	return domain.User{
 		UUID:      uuid2String(user.ID),
-		Role:      user.Role.String,
-		Username:  user.Username.String,
+		Role:      "",
+		Username:  user.Username,
 		FullName:  user.FullName.String,
 		Email:     user.Email,
-		CreatedAt: pgTimeTZ(user.CreatedAt, time.UTC),
-		UpdatedAt: pgTimeTZ(user.UpdatedAt, time.UTC),
+		CreatedAt: pgTimeTZ(user.CreatedAt),
+		UpdatedAt: pgTimeTZ(user.UpdatedAt),
 	}
 }

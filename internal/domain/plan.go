@@ -24,15 +24,20 @@ type UserPlan struct {
 }
 
 type CreatePlanInput struct {
-	FullName        string `json:"full_name"`
-	Direction       int32  `json:"direction"`
-	TaskDescription string `json:"task_description"`
-	EmailToFeedback string `json:"email_to_feedback"`
+	FullName        string `json:"full_name" binding:"required"`
+	Direction       int32  `json:"direction" binding:"required,min=1"`
+	TaskDescription string `json:"task_description" binding:"required"`
+	EmailToFeedback string `json:"email_to_feedback" binding:"required,email"`
 }
 
 type CreatePlanInputEmail struct {
-	FullName        string `json:"full_name"`
-	Direction       string `json:"direction"`
-	TaskDescription string `json:"task_description"`
-	EmailToFeedback string `json:"email_to_feedback"`
+	FullName        string `json:"full_name" binding:"required"`
+	Direction       string `json:"direction" binding:"required,min=1"`
+	TaskDescription string `json:"task_description" binding:"required"`
+	EmailToFeedback string `json:"email_to_feedback" binding:"required,email"`
+}
+
+type ResponseToPlanInput struct {
+	PlanUID string `json:"plan_uid" binding:"required"`
+	Message string `json:"message" binding:"required,min=20"` // minimum 20 symbols for message
 }

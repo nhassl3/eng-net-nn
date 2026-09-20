@@ -49,7 +49,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 	router.Use(middleware.Recovery())        // panic recovery with stacktrace, must run after Logging
 	// One list for both CORS and the cross-site guard, so an origin can never
 	// be allowed by one and rejected by the other.
-	origins := append(append([]string{}, allowOrigins...), "http://localhost:3000")
+	origins := append(append([]string{}, allowOrigins...))
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: origins,
@@ -102,20 +102,23 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 		plan := api.Group("/plans")
 		{
-			plan.POST("/", h.requestPlan)
+			plan.POST("/", h.middleware.UserIdentityOmitempty, h.requestPlan)
 			plan.GET("/:id", h.middleware.UserIdentity, h.getResponseFromRequest)
 		}
 
 		admin := api.Group("/admin", h.middleware.UserIdentity, h.middleware.AdminIdentity)
 		{
+			admin.POST("/add_admin/:id", h.addAdmin)     // UID of the user
+			admin.POST("/add_partner/:id", h.addPartner) // UID of the user
+
 			vacanciesAdmin := admin.Group("/vacancies")
 			{
 				vacanciesAdmin.POST("/", h.createVacancy)
-				vacanciesAdmin.PUT("/:id", h.updateVacancy)
-				vacanciesAdmin.DELETE("/:id", h.deleteVacancy)
+				vacanciesAdmin.PUT("/:id", h.updateVacancy)    // id vacancy
+				vacanciesAdmin.DELETE("/:id", h.deleteVacancy) // id vacancy
 
-				vacanciesAdmin.GET("/", h.getRespondVacancies)
-				vacanciesAdmin.GET("/:id", h.getRespondVacancy)
+				vacanciesAdmin.GET("/", h.getRespondVacancies)  // list of responds
+				vacanciesAdmin.GET("/:id", h.getRespondVacancy) // id respond
 			}
 
 			jobDirectionsAdmin := admin.Group("/job_directions")
@@ -132,10 +135,14 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 			{
 				planAdmin.GET("/", h.getAllPlans)
 				planAdmin.GET("/:id", h.getPlan)
-				// TODO: POST response to plan
+				planAdmin.POST("/", h.responseToPlan)
 			}
 		}
 	}
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	return router
 }

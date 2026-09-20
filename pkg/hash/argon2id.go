@@ -69,7 +69,33 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		return false, ErrInvalidHash
 	}
 
-	computeHash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
+	computeHash := argon2.IDKey([]byte(password), salt, iteration, memory, parallelism, uint32(len(storedHash)))
 
 	return subtle.ConstantTimeCompare(storedHash, computeHash) == 1, nil
+}
+
+// NeedsRehash reports whether encodedHash was produced with parameters weaker
+// than the package's current Argon2 constants, so callers can upgrade the
+// stored hash on a successful login.
+func NeedsRehash(encodedHash string) (bool, error) {
+	parts := strings.Split(encodedHash, "$")
+	if len(parts) != 6 {
+		return false, ErrInvalidHash
+	}
+
+	var version int
+	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil {
+		return false, ErrInvalidHash
+	}
+	if version != argon2.Version {
+		return true, nil
+	}
+
+	var memory, iteration uint32
+	var parallelism uint8
+	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &iteration, &parallelism); err != nil {
+		return false, ErrInvalidHash
+	}
+
+	return memory < argonMemory || iteration < argonTime || parallelism < argonThreads, nil
 }

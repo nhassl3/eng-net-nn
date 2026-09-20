@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -44,6 +42,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	if cfg.Token.Cookie.SameSite == "none" && cfg.Token.Cookie.Secure == true {
+		fmt.Fprint(os.Stdout, "set secure for cookie with same_site='none'\n")
+	}
+
 	log, err := logger.New(logger.Config{
 		Level:      cfg.Log.Level,
 		AddCaller:  cfg.Log.AddCaller,
@@ -62,8 +64,12 @@ func main() {
 	log.Info("starting server")
 
 	server := new(app.Server)
+	if err := server.New(cfg, log); err != nil {
+		log.Error("error initializing server", logger.Err(err))
+		os.Exit(1)
+	}
 	go func() {
-		if err := server.Run(cfg, log); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Run(); err != nil {
 			log.Error("error starting server", logger.Err(err))
 		}
 	}()

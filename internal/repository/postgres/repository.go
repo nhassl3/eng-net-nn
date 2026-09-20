@@ -16,6 +16,7 @@ type Authorization interface {
 type Admin interface {
 	IsAdmin(ctx context.Context, userID string) (bool, error)
 	AddAdmin(ctx context.Context, userID string) error
+	AddPartner(ctx context.Context, userUID string) error
 }
 
 type Vacancies interface {
@@ -27,23 +28,25 @@ type Vacancies interface {
 	DeleteVacancy(ctx context.Context, vacancyId string) error
 
 	ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error)
-	GetJd(ctx context.Context, jdId int32) (*domain.JobDirection, error)
+	GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error)
 
 	CreateJd(ctx context.Context, params *domain.CreateJobDirectionInput) (*domain.JobDirection, error)
-	UpdateJd(ctx context.Context, jdId int32, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
-	RemoveJd(ctx context.Context, jdId int32) error
+	UpdateJd(ctx context.Context, jdId int64, params *domain.UpdateJobDirectionInput) (*domain.JobDirection, error)
+	RemoveJd(ctx context.Context, jdId int64) error
 
 	RespondToVacancy(ctx context.Context, vacancyId, objectName string, applicantsForm *domain.ApplicantsFormInput) (string, error)
-	GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error)
+	GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error)
 	GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error)
 }
 
 type Plan interface {
 	CreatePlan(ctx context.Context, plan *domain.CreatePlanInput) (*domain.Plan, error)
-	GetPlan(ctx context.Context, planId string) (*domain.UserPlan, error)
+	GetUserPlan(ctx context.Context, planUID, userUID string) (*domain.UserPlan, error)
+	GetPlan(ctx context.Context, planUID string) (*domain.UserPlan, error)
 	GetDirection(ctx context.Context, directionId int32) (string, error)
 	CreateLinkRequest(ctx context.Context, userId, planId string) error
-	GetAllPlans(ctx context.Context) (*domain.Plans, error)
+	GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error)
+	ResponseToPlan(ctx context.Context, planUID string) (*domain.Plan, error)
 }
 
 type Repository struct {

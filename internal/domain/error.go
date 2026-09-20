@@ -22,6 +22,11 @@ const (
 	TokenExpired             = "TOKEN_EXPIRED"
 	InvalidToken             = "INVALID_TOKEN"
 	TokenRevoked             = "TOKEN_REVOKED"
+	InvalidParam             = "INVALID_PARAM"
+	EmptyData                = "EMPTY_DATA"
+	Unauthorized             = "UNAUTHORIZED"
+	InvalidInput             = "INVALID_INPUT"
+	AlreadyHasRole           = "ALREADY_HAS_ROLE"
 )
 
 type DomainError struct {
@@ -63,4 +68,9 @@ var (
 	ErrExpiredToken              = newError(TokenExpired, "expired token")
 	ErrInvalidToken              = newError(InvalidToken, "invalid token")
 	ErrTokenRevoked              = newError(TokenRevoked, "token revoked")
+	ErrInvalidParam              = newError(InvalidParam, "invalid param")
+	ErrEmptyData                 = newError(EmptyData, "empty data")
+	ErrUnauthorized              = newError(Unauthorized, "unauthorized")
+	ErrInvalidInput              = newError(InvalidInput, "invalid input: violates a database constraint")
+	ErrUserAlreadyHasRole        = newError(AlreadyHasRole, "user already has role")
 )

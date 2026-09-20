@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/gabriel-vasile/mimetype"
@@ -18,11 +18,11 @@ import (
 const MaxFileSize = 10 << 20
 
 var allowedContentTypes = map[string]string{
-	"text/plain":         ".txt",
 	"text/rtf":           ".rtf",
 	"application/rtf":    ".rtf",
 	"application/pdf":    ".pdf",
 	"application/msword": ".doc",
+	"application/vnd.oasis.opendocument.text":                                 ".odt",
 	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
 }
 
@@ -117,5 +117,5 @@ func ResolveContentType(data []byte) (string, error) {
 // GenerateObjectName creates a unique object path for file storage.
 func GenerateObjectName(prefix, owner, contentType string) string {
 	ext := allowedContentTypes[contentType]
-	return filepath.Join(prefix, owner, uuid.NewString()+ext)
+	return path.Join(prefix, owner, uuid.NewString()+ext)
 }

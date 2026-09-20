@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,12 +11,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	AccessToken  = "access_token"
+	RefreshToken = "refresh_token"
+)
+
 type PASETOMaker struct {
-	key paseto.V4SymmetricKey
-	ttl time.Duration
+	key         paseto.V4SymmetricKey
+	ttl         time.Duration
+	expectedTyp string
 }
 
-func NewPASETOMaker(keyHex string, ttl time.Duration) (*PASETOMaker, error) {
+// NewPASETOMaker creates a maker dedicated to a single token type (typ must be
+// AccessToken or RefreshToken). VerifyToken rejects any token whose "typ"
+// claim does not match, so an access token can't be used as a refresh token
+// or vice versa even if the same key were ever reused across makers.
+func NewPASETOMaker(keyHex string, ttl time.Duration, typ string) (*PASETOMaker, error) {
 	keyBytes, err := hex.DecodeString(keyHex)
 	if err != nil {
 		return nil, fmt.Errorf("paseto: decode key: %w", err)
@@ -29,11 +40,11 @@ func NewPASETOMaker(keyHex string, ttl time.Duration) (*PASETOMaker, error) {
 		return nil, fmt.Errorf("paseto: create key: %w", err)
 	}
 
-	return &PASETOMaker{key: key, ttl: ttl}, nil
+	return &PASETOMaker{key: key, ttl: ttl, expectedTyp: typ}, nil
 }
 
 func (p *PASETOMaker) CreateToken(username, uid, role string) (string, error) {
-	return p.createTokenWithJTI(username, uid, role, uuid.New().String(), time.Now())
+	return p.createTokenWithJTI(username, uid, role, uuid.New().String(), AccessToken, time.Now())
 }
 
 // GetTTL returns TTL for token in seconds
@@ -41,7 +52,7 @@ func (p *PASETOMaker) GetTTL() int {
 	return int(p.ttl.Seconds())
 }
 
-func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti string, startTime time.Time) (string, error) {
+func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti, typ string, startTime time.Time) (string, error) {
 	if startTime.Equal(time.Time{}) {
 		startTime = time.Now()
 	}
@@ -53,6 +64,7 @@ func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti string, startT
 	token.SetString("username", username)
 	token.SetString("uid", uid)
 	token.SetString("role", role)
+	token.SetString("typ", typ)
 
 	return token.V4Encrypt(p.key, nil), nil
 }
@@ -60,7 +72,7 @@ func (p *PASETOMaker) createTokenWithJTI(username, uid, role, jti string, startT
 func (p *PASETOMaker) CreateRefreshToken(username, uid, role string) (string, *Payload, error) {
 	begin := time.Now()
 	jti := uuid.New().String()
-	token, err := p.createTokenWithJTI(username, uid, role, jti, begin)
+	token, err := p.createTokenWithJTI(username, uid, role, jti, RefreshToken, begin)
 	if err != nil {
 		return "", nil, err
 	}
@@ -69,12 +81,13 @@ func (p *PASETOMaker) CreateRefreshToken(username, uid, role string) (string, *P
 		Username:  username,
 		UID:       uid,
 		Role:      role,
+		Typ:       RefreshToken,
 		IssuedAt:  begin,
 		ExpiredAt: begin.Add(p.ttl),
 	}, nil
 }
 
-func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
+func (p *PASETOMaker) VerifyToken(_ context.Context, tokenStr string) (*Payload, error) {
 	parser := paseto.NewParser()
 	parser.AddRule(paseto.NotExpired())
 
@@ -86,6 +99,11 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 		if errors.Is(err, paseto.RuleError{}) {
 			return nil, ErrExpiredToken
 		}
+		return nil, ErrInvalidToken
+	}
+
+	typ, err := token.GetString("typ")
+	if err != nil || typ == "" || typ != p.expectedTyp {
 		return nil, ErrInvalidToken
 	}
 
@@ -124,6 +142,7 @@ func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
 		Username:  username,
 		UID:       uid,
 		Role:      role,
+		Typ:       typ,
 		IssuedAt:  issuedAt,
 		ExpiredAt: expiredAt,
 	}, nil

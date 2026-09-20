@@ -4,7 +4,8 @@ INSERT INTO users (username, full_name, email, hashed_password) VALUES ($1, $2, 
 -- name: GetUser :one
 SELECT * FROM users  WHERE (sqlc.narg('id')::uuid IS NULL OR id = sqlc.narg('id')::uuid)
                        AND (sqlc.narg('username')::varchar IS NULL OR username=sqlc.narg('username')::varchar)
-                       AND (sqlc.narg('email')::varchar IS NULL OR email=sqlc.narg('email')::varchar);
+                       AND (sqlc.narg('email')::varchar IS NULL OR email=sqlc.narg('email')::varchar)
+    AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('username')::varchar IS NOT NULL OR sqlc.narg('email')::varchar IS NOT NULL) LIMIT 1;
 
 -- name: UserExists :one
 SELECT EXISTS(SELECT 1
@@ -12,6 +13,7 @@ SELECT EXISTS(SELECT 1
               WHERE (sqlc.narg('id')::uuid IS NULL OR id = sqlc.narg('id')::uuid)
               AND (sqlc.narg('username')::varchar IS NULL OR username=sqlc.narg('username')::varchar)
               AND (sqlc.narg('email')::varchar IS NULL OR email=sqlc.narg('email')::varchar)
+              AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('username')::varchar IS NOT NULL OR sqlc.narg('email')::varchar IS NOT NULL)
               AND (hashed_password=sqlc.arg('password')::varchar));
 
 -- name: UpdatePassword :one
@@ -20,6 +22,8 @@ SET hashed_password = sqlc.arg('new_password'),
     updated_at = now()
 WHERE (sqlc.narg('id')::uuid IS NULL OR id=sqlc.narg('id')::uuid)
 AND (sqlc.narg('username')::varchar IS NULL OR username=sqlc.narg('username')::varchar)
+  AND (sqlc.narg('email')::varchar IS NULL OR email=sqlc.narg('email')::varchar)
+    AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('username')::varchar IS NOT NULL OR sqlc.narg('email')::varchar IS NOT NULL)
 RETURNING *;
 
 
