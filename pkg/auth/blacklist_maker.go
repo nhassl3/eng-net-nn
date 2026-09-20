@@ -26,8 +26,8 @@ func (m *BlacklistedTokenManager) CreateRefreshToken(username, uid, role string)
 
 // VerifyToken delegates to the inner TokenManager and then checks the blacklist.
 // Requires context — uses context.Background() as fallback since the interface is context-free.
-func (m *BlacklistedTokenManager) VerifyToken(token string) (*Payload, error) {
-	payload, err := m.inner.VerifyToken(token)
+func (m *BlacklistedTokenManager) VerifyToken(ctx context.Context, token string) (*Payload, error) {
+	payload, err := m.inner.VerifyToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}

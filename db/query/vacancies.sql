@@ -7,6 +7,12 @@ SELECT * FROM vacancy_with_jd WHERE
                             AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar)
                             AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('name')::varchar IS NOT NULL) LIMIT 1;
 
+-- name: GetVacancyForUpdate :one
+SELECT * FROM vacancy_with_jd WHERE
+                                (sqlc.narg('id')::uuid IS NULL OR id=sqlc.narg('id')::uuid)
+                                AND (sqlc.narg('name')::varchar IS NULL OR name=sqlc.narg('name')::varchar)
+                                AND (sqlc.narg('id')::uuid IS NOT NULL OR sqlc.narg('name')::varchar IS NOT NULL) LIMIT 1 FOR UPDATE;
+
 -- name: CreateVacancy :one
 INSERT INTO vacancies (jd, name, description, required_exp, pay_day, skills) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
 
@@ -34,7 +40,10 @@ SELECT * FROM job_directions WHERE id=sqlc.arg('id')::bigint LIMIT 1;
 INSERT INTO job_directions (name, tags, description) VALUES (sqlc.arg('name')::varchar, sqlc.arg('tags')::text[], sqlc.arg('description')::text) RETURNING *;
 
 -- name: UpdateJobDirection :one
-UPDATE job_directions SET name=sqlc.narg('name')::varchar, tags=sqlc.narg('tags')::text[], description=sqlc.narg('description')::text
+UPDATE job_directions SET
+                          name=COALESCE(sqlc.narg('name')::varchar, name),
+                            tags=COALESCE(sqlc.narg('tags')::text[], tags),
+                            description=COALESCE(sqlc.narg('description')::text, description)
                       WHERE id=sqlc.arg('id')::bigint RETURNING *;
 
 -- name: RemoveJobDirection :exec
@@ -54,6 +63,9 @@ VALUES (
 
 -- name: GetRespondVacancies :many
 SELECT * FROM user_responds ORDER BY created_at DESC, id LIMIT $1 OFFSET $2;
+
+-- name: CountRespondVacancies :one
+SELECT COUNT(*) FROM user_responds;
 
 -- name: GetRespondVacancy :one
 SELECT * FROM user_responds WHERE id=$1 LIMIT 1;

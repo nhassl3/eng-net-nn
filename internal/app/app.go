@@ -80,11 +80,11 @@ func (s *Server) New(cfg *config.Config, log logger.Logger) error {
 	blacklistRepo := redis3.NewBlacklistRepository(redisClient)
 
 	// Access and refresh with blacklist maker initialize
-	accessMaker, err := auth.NewPASETOMaker(cfg.Token.PasetoKeyHex, cfg.Token.AccessTTL)
+	accessMaker, err := auth.NewPASETOMaker(cfg.Token.PASETOAccessKeyHex, cfg.Token.AccessTTL, auth.AccessToken)
 	if err != nil {
 		return fmt.Errorf("app: create access token maker: %w", err)
 	}
-	refreshMaker, err := auth.NewPASETOMaker(cfg.Token.PasetoKeyHex, cfg.Token.RefreshTTL)
+	refreshMaker, err := auth.NewPASETOMaker(cfg.Token.PASETORefreshKeyHex, cfg.Token.RefreshTTL, auth.RefreshToken)
 	if err != nil {
 		return fmt.Errorf("app: create refresh token maker: %w", err)
 	}
@@ -139,12 +139,13 @@ func (s *Server) New(cfg *config.Config, log logger.Logger) error {
 
 	// Formate http server
 	s.httpServer = &http.Server{
-		Addr:           cfg.HttpServer.Address,
-		MaxHeaderBytes: 1 << 20,
-		Handler:        handler.InitRoutes(cfg.Env, cfg.AllowOrigins),
-		ReadTimeout:    cfg.HttpServer.Timeout,
-		WriteTimeout:   cfg.HttpServer.Timeout,
-		IdleTimeout:    cfg.HttpServer.IdleTimeout,
+		Addr:              cfg.HttpServer.Address,
+		MaxHeaderBytes:    1 << 20,
+		Handler:           handler.InitRoutes(cfg.Env, cfg.AllowOrigins),
+		ReadHeaderTimeout: cfg.HttpServer.ReadHeaderTimeout,
+		ReadTimeout:       cfg.HttpServer.ReadTimeout,
+		WriteTimeout:      cfg.HttpServer.WriteTimeout,
+		IdleTimeout:       cfg.HttpServer.IdleTimeout,
 	}
 
 	return nil

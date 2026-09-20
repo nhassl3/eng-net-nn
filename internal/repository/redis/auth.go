@@ -29,7 +29,7 @@ func (r *AuthRedisRepository) Profile(ctx context.Context, params domain.GetMePa
 		return nil, domain.ErrRedisNotFound
 	}
 
-	var user *domain.User
+	user := &domain.User{}
 	if err := r.redis.Get(ctx, profileKey+*params.UUID).Scan(user); err != nil {
 		if errors.Is(err, redis.Nil) {
 			return nil, domain.ErrRedisNotFound
@@ -48,6 +48,18 @@ func (r *AuthRedisRepository) SetProfile(ctx context.Context, user *domain.User)
 	key := profileKey + user.UUID
 	if err := r.redis.Set(ctx, key, user, r.userProfileTTL).Err(); err != nil {
 		return fmt.Errorf("AuthRedis.SetProfile: %w", err)
+	}
+
+	return nil
+}
+
+func (r *AuthRedisRepository) DeleteProfile(ctx context.Context, uuid string) error {
+	if uuid == "" {
+		return nil
+	}
+
+	if err := r.redis.Del(ctx, profileKey+uuid).Err(); err != nil {
+		return fmt.Errorf("AuthRedis.DeleteProfile: %w", err)
 	}
 
 	return nil

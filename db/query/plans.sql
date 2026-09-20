@@ -19,9 +19,14 @@ WHERE
     (sqlc.narg('user_id')::varchar IS NULL OR u.id=sqlc.narg('user_id')::varchar)
   AND p.id=sqlc.arg('plan_id');
 
-
 -- name: GetDirection :one
 SELECT name FROM directions WHERE id=$1 LIMIT 1;
 
 -- name: GetAllPlans :many
 SELECT * FROM plans LIMIT $1 OFFSET $2;
+
+-- name: CountPlans :one
+SELECT COUNT(*) FROM plans;
+
+-- name: ResponseToPlan :one
+UPDATE plans SET active=false, updated_at=now() WHERE id=$1 RETURNING *;

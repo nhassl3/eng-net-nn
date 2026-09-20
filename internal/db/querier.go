@@ -13,6 +13,9 @@ import (
 
 type Querier interface {
 	AddAdmin(ctx context.Context, dollar_1 uuid.UUID) error
+	AddPartner(ctx context.Context, dollar_1 uuid.UUID) error
+	CountPlans(ctx context.Context) (int64, error)
+	CountRespondVacancies(ctx context.Context) (int64, error)
 	CreateJobDirection(ctx context.Context, arg CreateJobDirectionParams) (JobDirection, error)
 	CreateLinkRequest(ctx context.Context, arg CreateLinkRequestParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
@@ -29,12 +32,14 @@ type Querier interface {
 	GetUserPlan(ctx context.Context, arg GetUserPlanParams) (GetUserPlanRow, error)
 	GetVacancies(ctx context.Context, arg GetVacanciesParams) ([]VacancyWithJd, error)
 	GetVacancy(ctx context.Context, arg GetVacancyParams) (VacancyWithJd, error)
+	GetVacancyForUpdate(ctx context.Context, arg GetVacancyForUpdateParams) (VacancyWithJd, error)
 	IsAdmin(ctx context.Context, dollar_1 uuid.UUID) (bool, error)
 	RemoveAdmin(ctx context.Context, dollar_1 uuid.UUID) error
 	RemoveJobDirection(ctx context.Context, id int64) error
 	RemoveVacancy(ctx context.Context, arg RemoveVacancyParams) error
 	RequestPlan(ctx context.Context, arg RequestPlanParams) (Plan, error)
 	RespondToVacancy(ctx context.Context, arg RespondToVacancyParams) (uuid.UUID, error)
+	ResponseToPlan(ctx context.Context, id uuid.UUID) (Plan, error)
 	UpdateJobDirection(ctx context.Context, arg UpdateJobDirectionParams) (JobDirection, error)
 	UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (User, error)
 	UpdateVacancy(ctx context.Context, arg UpdateVacancyParams) (Vacancy, error)

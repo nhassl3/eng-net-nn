@@ -12,7 +12,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, full_name, email, hashed_password) VALUES ($1, $2, $3, $4) RETURNING id, username, full_name, email, created_at, updated_at, hashed_password, role
+INSERT INTO users (username, full_name, email, hashed_password) VALUES ($1, $2, $3, $4) RETURNING id, username, full_name, email, created_at, updated_at, hashed_password
 `
 
 type CreateUserParams struct {
@@ -38,15 +38,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
-		&i.Role,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, username, full_name, email, created_at, updated_at, hashed_password, role FROM users  WHERE ($1::uuid IS NULL OR id = $1::uuid)
+SELECT id, username, full_name, email, created_at, updated_at, hashed_password FROM users  WHERE ($1::uuid IS NULL OR id = $1::uuid)
                        AND ($2::varchar IS NULL OR username=$2::varchar)
                        AND ($3::varchar IS NULL OR email=$3::varchar)
+    AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL OR $3::varchar IS NOT NULL) LIMIT 1
 `
 
 type GetUserParams struct {
@@ -66,7 +66,6 @@ func (q *Queries) GetUser(ctx context.Context, arg GetUserParams) (User, error) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
-		&i.Role,
 	)
 	return i, err
 }
@@ -77,17 +76,25 @@ SET hashed_password = $1,
     updated_at = now()
 WHERE ($2::uuid IS NULL OR id=$2::uuid)
 AND ($3::varchar IS NULL OR username=$3::varchar)
-RETURNING id, username, full_name, email, created_at, updated_at, hashed_password, role
+  AND ($4::varchar IS NULL OR email=$4::varchar)
+    AND ($2::uuid IS NOT NULL OR $3::varchar IS NOT NULL OR $4::varchar IS NOT NULL)
+RETURNING id, username, full_name, email, created_at, updated_at, hashed_password
 `
 
 type UpdatePasswordParams struct {
 	NewPassword string      `json:"new_password"`
 	ID          pgtype.UUID `json:"id"`
 	Username    pgtype.Text `json:"username"`
+	Email       pgtype.Text `json:"email"`
 }
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) (User, error) {
-	row := q.db.QueryRow(ctx, updatePassword, arg.NewPassword, arg.ID, arg.Username)
+	row := q.db.QueryRow(ctx, updatePassword,
+		arg.NewPassword,
+		arg.ID,
+		arg.Username,
+		arg.Email,
+	)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -97,7 +104,6 @@ func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.HashedPassword,
-		&i.Role,
 	)
 	return i, err
 }
@@ -108,6 +114,7 @@ SELECT EXISTS(SELECT 1
               WHERE ($1::uuid IS NULL OR id = $1::uuid)
               AND ($2::varchar IS NULL OR username=$2::varchar)
               AND ($3::varchar IS NULL OR email=$3::varchar)
+              AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL OR $3::varchar IS NOT NULL)
               AND (hashed_password=$4::varchar))
 `
 

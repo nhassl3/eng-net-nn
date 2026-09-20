@@ -36,3 +36,8 @@ type CreatePlanInputEmail struct {
 	TaskDescription string `json:"task_description" binding:"required"`
 	EmailToFeedback string `json:"email_to_feedback" binding:"required,email"`
 }
+
+type ResponseToPlanInput struct {
+	PlanUID string `json:"plan_uid" binding:"required"`
+	Message string `json:"message" binding:"required,min=20"` // minimum 20 symbols for message
+}

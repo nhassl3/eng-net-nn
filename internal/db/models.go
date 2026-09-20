@@ -47,13 +47,20 @@ type LinkUserWithPlan struct {
 	PlanID uuid.UUID `json:"plan_id"`
 }
 
+type Partner struct {
+	UserID    uuid.UUID          `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Plan struct {
 	ID              uuid.UUID          `json:"id"`
 	FullName        pgtype.Text        `json:"full_name"`
 	Direction       int32              `json:"direction"`
 	TaskDescription pgtype.Text        `json:"task_description"`
 	Email           string             `json:"email"`
+	Active          bool               `json:"active"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {
@@ -64,7 +71,6 @@ type User struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	HashedPassword string             `json:"hashed_password"`
-	Role           pgtype.Text        `json:"role"`
 }
 
 type UserRespond struct {

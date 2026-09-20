@@ -50,18 +50,19 @@ type UpdateJobDirectionInput struct {
 
 type RespondVacancies struct {
 	RespondVacancies []RespondVacancy `json:"respond_vacancies"`
+	Total            int              `json:"total"`
 }
 
 type RespondVacancy struct {
 	UUID        string    `json:"uuid"`
-	FullName    string    `json:"fullName"`
-	PhoneNumber string    `json:"phoneNumber"`
+	FullName    string    `json:"full_name"`
+	PhoneNumber string    `json:"phone_number"`
 	Email       string    `json:"email"`
 	City        string    `json:"city"`
 	Exp         string    `json:"exp"`
 	Description string    `json:"description"`
-	ResumeUrl   string    `json:"resumeUrl"`
-	VacancyId   string    `json:"vacancyId"`
+	ResumeUrl   string    `json:"resume_url"`
+	VacancyId   string    `json:"vacancy_id"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -70,8 +71,8 @@ type Vacancies struct {
 }
 
 type ApplicantsFormInput struct {
-	FullName    string `json:"fullName" binding:"omitempty"`
-	PhoneNumber string `json:"phoneNumber" binding:"omitempty"`
+	FullName    string `json:"full_name" binding:"omitempty"`
+	PhoneNumber string `json:"phone_number" binding:"omitempty"`
 	Email       string `json:"email" binding:"required,email"`
 	City        string `json:"city" binding:"required,city"`
 	Exp         string `json:"exp" binding:"omitempty"`

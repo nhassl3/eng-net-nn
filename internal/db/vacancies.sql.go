@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countRespondVacancies = `-- name: CountRespondVacancies :one
+SELECT COUNT(*) FROM user_responds
+`
+
+func (q *Queries) CountRespondVacancies(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countRespondVacancies)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createJobDirection = `-- name: CreateJobDirection :one
 INSERT INTO job_directions (name, tags, description) VALUES ($1::varchar, $2::text[], $3::text) RETURNING id, name, tags, description
 `
@@ -257,6 +268,38 @@ func (q *Queries) GetVacancy(ctx context.Context, arg GetVacancyParams) (Vacancy
 	return i, err
 }
 
+const getVacancyForUpdate = `-- name: GetVacancyForUpdate :one
+SELECT id, jd, name, description, required_exp, pay_day, skills, created_at, updated_at, jd_name, jd_tags, jd_description FROM vacancy_with_jd WHERE
+                                ($1::uuid IS NULL OR id=$1::uuid)
+                                AND ($2::varchar IS NULL OR name=$2::varchar)
+                                AND ($1::uuid IS NOT NULL OR $2::varchar IS NOT NULL) LIMIT 1 FOR UPDATE
+`
+
+type GetVacancyForUpdateParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Name pgtype.Text `json:"name"`
+}
+
+func (q *Queries) GetVacancyForUpdate(ctx context.Context, arg GetVacancyForUpdateParams) (VacancyWithJd, error) {
+	row := q.db.QueryRow(ctx, getVacancyForUpdate, arg.ID, arg.Name)
+	var i VacancyWithJd
+	err := row.Scan(
+		&i.ID,
+		&i.Jd,
+		&i.Name,
+		&i.Description,
+		&i.RequiredExp,
+		&i.PayDay,
+		&i.Skills,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.JdName,
+		&i.JdTags,
+		&i.JdDescription,
+	)
+	return i, err
+}
+
 const removeJobDirection = `-- name: RemoveJobDirection :exec
 DELETE FROM job_directions WHERE id=$1::bigint
 `
@@ -324,7 +367,10 @@ func (q *Queries) RespondToVacancy(ctx context.Context, arg RespondToVacancyPara
 }
 
 const updateJobDirection = `-- name: UpdateJobDirection :one
-UPDATE job_directions SET name=$1::varchar, tags=$2::text[], description=$3::text
+UPDATE job_directions SET
+                          name=COALESCE($1::varchar, name),
+                            tags=COALESCE($2::text[], tags),
+                            description=COALESCE($3::text, description)
                       WHERE id=$4::bigint RETURNING id, name, tags, description
 `
 

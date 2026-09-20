@@ -47,7 +47,11 @@ func (h *Handler) getResponseFromRequest(c *gin.Context) {
 }
 
 func (h *Handler) getAllPlans(c *gin.Context) {
-	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context())
+	limit, offset, ok := parseQuery(c)
+	if !ok {
+		return
+	}
+	allPlans, err := h.services.Plan.GetAllPlans(c.Request.Context(), limit, offset)
 	if err != nil {
 		handleError(c, "getAllPlans", err)
 		return
@@ -63,4 +67,18 @@ func (h *Handler) getPlan(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, userPlan)
+}
+
+func (h *Handler) responseToPlan(c *gin.Context) {
+	var input domain.ResponseToPlanInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		NewErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	updatedPlan, err := h.services.Plan.ResponseToPlan(c.Request.Context(), input.PlanUID, input.Message)
+	if err != nil {
+		handleError(c, "responseToPlan", err)
+		return
+	}
+	c.JSON(http.StatusOK, updatedPlan)
 }

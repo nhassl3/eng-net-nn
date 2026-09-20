@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
 	"github.com/nhassl3/IpBuild-backend/internal/domain"
 )
@@ -27,6 +28,9 @@ func (r *PlanRepo) CreatePlan(ctx context.Context, params *domain.CreatePlanInpu
 		Email:           params.EmailToFeedback,
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.CreatePlan: %w", err)
 	}
 	return new(mapPlan(plan)), nil
@@ -48,6 +52,9 @@ func (r *PlanRepo) GetUserPlan(ctx context.Context, planUID, userUID string) (*d
 		PlanID: planID,
 	})
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
@@ -67,6 +74,9 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPla
 		PlanID: planID,
 	})
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("plan_repository.GetPlan: %w", err)
 	}
 
@@ -79,6 +89,9 @@ func (r *PlanRepo) GetPlan(ctx context.Context, planUID string) (*domain.UserPla
 func (r *PlanRepo) GetDirection(ctx context.Context, directionId int32) (string, error) {
 	name, err := r.db.GetDirection(ctx, directionId)
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return "", mapped
+		}
 		return "", fmt.Errorf("plan_repository.GetDirection: %w", err)
 	}
 	return name.String, nil
@@ -95,22 +108,55 @@ func (r *PlanRepo) CreateLinkRequest(ctx context.Context, userId, planId string)
 		return domain.ErrPlanRequestNotExists
 	}
 
-	return r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
+	if err := r.db.CreateLinkRequest(ctx, db.CreateLinkRequestParams{
 		UserID: userID,
 		PlanID: planID,
-	})
+	}); err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrPlanRequestAlreadyExists); ok {
+			return mapped
+		}
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return mapped
+		}
+		return fmt.Errorf("plan_repository.CreateLinkRequest: %w", err)
+	}
+	return nil
 }
 
 // GetAllPlans returns plans
-func (r *PlanRepo) GetAllPlans(ctx context.Context) (*domain.Plans, error) {
+func (r *PlanRepo) GetAllPlans(ctx context.Context, limit, offset int32) (*domain.Plans, error) {
 	allUsersPlans, err := r.db.GetAllPlans(ctx, db.GetAllPlansParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrPlanRequestNotExists); ok {
+			return nil, mapped
+		}
+		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
+	}
+
+	total, err := r.db.CountPlans(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("plan_repository.GetAllPlans: %w", err)
 	}
-	return mapPlans(allUsersPlans), nil
+
+	return mapPlans(allUsersPlans, total), nil
+}
+
+func (r *PlanRepo) ResponseToPlan(ctx context.Context, planUID string) (*domain.Plan, error) {
+	planID, err := string2UUID(planUID)
+	if err != nil {
+		return nil, domain.ErrInvalidParam
+	}
+	updatedPlan, err := r.db.ResponseToPlan(ctx, planID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrPlanRequestNotExists
+		}
+		return nil, fmt.Errorf("plan_repository.ResponseToPlan: %w", err)
+	}
+	return new(mapPlan(updatedPlan)), nil
 }
 
 func mapPlan(plan db.Plan) domain.Plan {
@@ -120,17 +166,17 @@ func mapPlan(plan db.Plan) domain.Plan {
 		Direction:       plan.Direction,
 		TaskDescription: plan.TaskDescription.String,
 		EmailToFeedback: plan.Email,
-		CreatedAt:       pgTimeTZ(plan.CreatedAt, time.UTC),
+		CreatedAt:       pgTimeTZ(plan.CreatedAt),
 	}
 }
 
-func mapPlans(plans []db.Plan) *domain.Plans {
+func mapPlans(plans []db.Plan, total int64) *domain.Plans {
 	domainPlan := make([]domain.Plan, len(plans))
 	for i := range plans {
 		domainPlan[i] = mapPlan(plans[i])
 	}
 	return &domain.Plans{
 		Plans: domainPlan,
-		Total: len(plans),
+		Total: int(total),
 	}
 }

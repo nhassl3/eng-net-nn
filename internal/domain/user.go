@@ -27,23 +27,23 @@ func (u *User) UnmarshalBinary(data []byte) error {
 }
 
 type CreateUserInput struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
+	Username string `json:"username" binding:"required,min=3,max=30"`
 	FullName string `json:"full_name" binding:"required,min=2,max=100"`
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }
-
+	
 type SignInInput struct {
-	Username string `json:"username" binding:"omitempty,min=3,max=50"`
+	Username string `json:"username"`
 	Email    string `json:"email" binding:"omitempty,email"`
-	ID       string `json:"id" binding:"omitempty"`
+	ID       string `json:"id"`
 	Password string `json:"password" binding:"required"`
 }
 
 type GetMeParams struct {
 	UUID     *string `json:"uuid" binding:"omitempty"`
 	Email    *string `json:"email" binding:"omitempty,email"`
-	Username *string `json:"username" binding:"omitempty,min=3,max=50"`
+	Username *string `json:"username" binding:"omitempty,min=3,max=30"`
 }
 
 type RefreshInput struct {

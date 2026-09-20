@@ -120,22 +120,26 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 	}, nil
 }
 
+// ParseToken verifies the access token (signature + blacklist) and builds
+// the user identity straight from its payload claims. It deliberately does
+// not touch Postgres/Redis: uid/role are already in the token, and
+// per-request auth (middleware) never needs the full profile — only /api/me
+// does, via GetMe.
 func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
-	payload, err := s.accessMaker.VerifyToken(token)
+	payload, err := s.accessMaker.VerifyToken(ctx, token)
 	if err != nil {
 		return nil, mapTokenError("auth_service.ParseToken", err)
 	}
 
-	user, err := s.GetMe(ctx, payload.UID)
-	if err != nil {
-		return nil, fmt.Errorf("auth_service.ParseToken: %w", err)
-	}
-
-	return user, nil
+	return &domain.User{
+		UUID:     payload.UID,
+		Username: payload.Username,
+		Role:     payload.Role,
+	}, nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
-	payload, err := s.refreshMaker.VerifyToken(refreshToken)
+	payload, err := s.refreshMaker.VerifyToken(ctx, refreshToken)
 	if err != nil {
 		return nil, mapTokenError("auth_service.RefreshToken", err)
 	}
@@ -153,7 +157,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 }
 
 func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken string) error {
-	payload, err := s.accessMaker.VerifyToken(accessToken)
+	payload, err := s.accessMaker.VerifyToken(ctx, accessToken)
 	if err != nil {
 		return mapTokenError("auth_service.Logout", err)
 	}
@@ -163,7 +167,7 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 	}
 
 	if refreshToken != "" {
-		payloadRefresh, err := s.refreshMaker.VerifyToken(refreshToken)
+		payloadRefresh, err := s.refreshMaker.VerifyToken(ctx, refreshToken)
 		if err != nil {
 			return mapTokenError("auth_service.Logout: payload refresh", err)
 		}
@@ -172,6 +176,8 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 			return fmt.Errorf("auth_serivce.Logout: blacklist refresh: %w", err)
 		}
 	}
+
+	_ = s.redisRepo.DeleteProfile(ctx, payload.UID)
 
 	return nil
 }

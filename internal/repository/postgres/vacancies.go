@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/nhassl3/IpBuild-backend/internal/db"
@@ -22,9 +21,6 @@ func NewVacanciesRepo(db *db.Store) *VacanciesRepo {
 }
 
 func (r *VacanciesRepo) List(ctx context.Context, limit, offset int32) (*domain.VacanciesWithJd, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	vacancies, err := r.db.GetVacancies(ctx, db.GetVacanciesParams{
 		Offset: offset,
 		Limit:  limit,
@@ -40,25 +36,30 @@ func (r *VacanciesRepo) GetVacancy(ctx context.Context, vacancyId string) (*doma
 		ID: uuidPtr2Nullable(vacancyId),
 	})
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrVacancyNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetVacancy: failed to load vacancy: %w", err)
 	}
 	return new(mapVacancyWithJd(vacancy)), nil
 }
 
 func (r *VacanciesRepo) CreateVacancy(ctx context.Context, params *domain.CreateVacancyInput) (*domain.Vacancy, error) {
-	payDay := 0.0
-	if params.PayDay != nil {
-		payDay = *params.PayDay
+	if params.PayDay == nil || *params.PayDay <= 0 {
+		return nil, domain.ErrInvalidParam
 	}
 	vacancy, err := r.db.CreateVacancy(ctx, db.CreateVacancyParams{
 		Jd:          params.Jd,
 		Name:        stringToNullable(params.Name),
 		Description: stringToNullable(params.Description),
 		RequiredExp: stringPtrToNullable(params.RequiredExp),
-		PayDay:      payDay,
+		PayDay:      *params.PayDay,
 		Skills:      params.Skills,
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, domain.ErrVacancyAlreadyExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.Create: failed to create vacancy: %w", err)
 	}
 	return new(mapVacancy(vacancy)), nil
@@ -78,10 +79,13 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 			fnErr               error
 		)
 
-		vacancy, fnErr := q.GetVacancy(ctx, db.GetVacancyParams{
+		vacancy, fnErr := q.GetVacancyForUpdate(ctx, db.GetVacancyForUpdateParams{
 			ID: uuid,
 		})
 		if fnErr != nil {
+			if mapped, ok := mapNotFound(fnErr, domain.ErrVacancyNotExists); ok {
+				return mapped
+			}
 			return fmt.Errorf("vacancies_repo.Update: failed to load vacancy id: %w", fnErr)
 		}
 
@@ -114,6 +118,12 @@ func (r *VacanciesRepo) UpdateVacancy(ctx context.Context, vacancyId string, upd
 		}
 
 		if _, fnErr = q.UpdateVacancy(ctx, updateVacancyParams); fnErr != nil {
+			if mapped, ok := mapConstraintErr(fnErr, nil); ok {
+				return mapped
+			}
+			if mapped, ok := mapNotFound(fnErr, domain.ErrVacancyNotExists); ok {
+				return mapped
+			}
 			return fmt.Errorf("vacancies_repo.Update: failed to update vacancy: %w", fnErr)
 		}
 
@@ -132,9 +142,6 @@ func (r *VacanciesRepo) DeleteVacancy(ctx context.Context, vacancyId string) err
 }
 
 func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domain.JobDirections, error) {
-	if limit == 0 {
-		limit = 4
-	}
 	jds, err := r.db.GetJDs(ctx, db.GetJDsParams{
 		Limit:  limit,
 		Offset: offset,
@@ -148,6 +155,9 @@ func (r *VacanciesRepo) ListJd(ctx context.Context, limit, offset int32) (*domai
 func (r *VacanciesRepo) GetJd(ctx context.Context, jdId int64) (*domain.JobDirection, error) {
 	jd, err := r.db.GetJD(ctx, jdId)
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetJd: failed to load job direction: %w", err)
 	}
 	return new(mapJobDirection(jd)), nil
@@ -177,6 +187,12 @@ func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int64, params *domain
 		Description: stringPtrToNullable(params.Description),
 	})
 	if err != nil {
+		if mapped, ok := mapConstraintErr(err, nil); ok {
+			return nil, mapped
+		}
+		if mapped, ok := mapNotFound(err, domain.ErrDirectionNotFound); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.UpdateJd: failed to update job direction: %w", err)
 	}
 	return new(mapJobDirection(jd)), nil
@@ -185,10 +201,8 @@ func (r *VacanciesRepo) UpdateJd(ctx context.Context, jdId int64, params *domain
 func (r *VacanciesRepo) RemoveJd(ctx context.Context, jdId int64) error {
 	if err := r.db.RemoveJobDirection(ctx, jdId); err != nil {
 		// 23503 — foreign key violation: vacancies still reference this direction.
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			if pgErr.Code == "23503" {
-				return domain.ErrDirectionHasVacancies
-			}
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23503" {
+			return domain.ErrDirectionHasVacancies
 		}
 		return fmt.Errorf("vacancies_repo.RemoveJd: failed to remove job direction: %w", err)
 	}
@@ -212,25 +226,32 @@ func (r *VacanciesRepo) RespondToVacancy(ctx context.Context, vacancyId, objectN
 		VacancyID:   vacancyID,
 	})
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-			if pgErr.Code == "23505" {
-				return "", domain.ErrRespondAlreadyExists
-			}
+		if mapped, ok := mapConstraintErr(err, domain.ErrRespondAlreadyExists); ok {
+			return "", mapped
 		}
 		return "", fmt.Errorf("vacancies_repo.RespondToVacancy: %w", err)
 	}
 	return uuid2String(userRespondId), nil
 }
 
-func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context) (*domain.RespondVacancies, error) {
+func (r *VacanciesRepo) GetRespondVacancies(ctx context.Context, limit, offset int32) (*domain.RespondVacancies, error) {
 	respondVacancies, err := r.db.GetRespondVacancies(ctx, db.GetRespondVacanciesParams{
-		Limit:  100,
-		Offset: 0,
+		Limit:  limit,
+		Offset: offset,
 	})
+	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrRespondVacanciesNotExists); ok {
+			return nil, mapped
+		}
+		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
+	}
+
+	total, err := r.db.CountRespondVacancies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancies: %w", err)
 	}
-	return mapRespondVacancies(respondVacancies), nil
+
+	return mapRespondVacancies(respondVacancies, total), nil
 }
 
 func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId string) (*domain.RespondVacancy, error) {
@@ -241,6 +262,9 @@ func (r *VacanciesRepo) GetRespondVacancy(ctx context.Context, respondVacancyId 
 
 	respondVacancy, err := r.db.GetRespondVacancy(ctx, id)
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrRespondVacancyNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("vacancies_repo.GetRespondVacancy: %w", err)
 	}
 	return new(mapRespondVacancy(respondVacancy)), nil
@@ -265,8 +289,8 @@ func mapVacancyWithJd(v db.VacancyWithJd) domain.VacancyWithJd {
 			RequiredExp: v.RequiredExp.String,
 			PayDay:      v.PayDay,
 			Skills:      v.Skills,
-			CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
-			UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+			CreatedAt:   pgTimeTZ(v.CreatedAt),
+			UpdatedAt:   pgTimeTZ(v.UpdatedAt),
 		},
 		JobDirection: domain.JobDirection{
 			Id:            v.Jd,
@@ -285,8 +309,8 @@ func mapVacancy(v db.Vacancy) domain.Vacancy {
 		RequiredExp: v.RequiredExp.String,
 		PayDay:      v.PayDay,
 		Skills:      v.Skills,
-		CreatedAt:   pgTimeTZ(v.CreatedAt, time.UTC),
-		UpdatedAt:   pgTimeTZ(v.UpdatedAt, time.UTC),
+		CreatedAt:   pgTimeTZ(v.CreatedAt),
+		UpdatedAt:   pgTimeTZ(v.UpdatedAt),
 	}
 }
 
@@ -309,13 +333,14 @@ func mapJobDirection(jd db.JobDirection) domain.JobDirection {
 	}
 }
 
-func mapRespondVacancies(respondVacancies []db.UserRespond) *domain.RespondVacancies {
+func mapRespondVacancies(respondVacancies []db.UserRespond, total int64) *domain.RespondVacancies {
 	domainRespondVacancies := make([]domain.RespondVacancy, len(respondVacancies))
 	for i := range respondVacancies {
 		domainRespondVacancies[i] = mapRespondVacancy(respondVacancies[i])
 	}
 	return &domain.RespondVacancies{
 		RespondVacancies: domainRespondVacancies,
+		Total:            int(total),
 	}
 }
 
@@ -331,6 +356,6 @@ func mapRespondVacancy(v db.UserRespond) domain.RespondVacancy {
 		// Raw object key; the service turns it into a presigned URL on read.
 		ResumeUrl: v.Resume.String,
 		VacancyId: uuid2String(v.VacancyID),
-		CreatedAt: pgTimeTZ(v.CreatedAt, time.UTC),
+		CreatedAt: pgTimeTZ(v.CreatedAt),
 	}
 }
