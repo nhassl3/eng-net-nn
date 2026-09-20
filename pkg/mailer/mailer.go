@@ -16,6 +16,8 @@ type Notifier interface {
 	NotifyNewPlan(ctx context.Context, plan *domain.CreatePlanInputEmail) error
 	NotifyUserAboutVacancy(ctx context.Context, vacancyName, userEmail string) error
 	NotifyUserAboutPlan(ctx context.Context, userEmail string) error
+	NotifyUserAboutCode(ctx context.Context, code string) error
+	NotifyUserAboutResponseToPlan(ctx context.Context, userEmail, message string) error
 	Close(ctx context.Context) error
 }
 
@@ -287,4 +289,12 @@ func (m *SMTPMailer) NotifyUserAboutPlan(ctx context.Context, userEmail string) 
 		return fmt.Errorf("mailer.NotifyUserAboutPlan: %w", err)
 	}
 	return m.enqueue(ctx, job{subject: "Рассмотрение Вашего плана", body: body, replyTo: userEmail, toUser: true})
+}
+
+func (m *SMTPMailer) NotifyUserAboutCode(ctx context.Context, code string) error {
+	return nil
+}
+
+func (m *SMTPMailer) NotifyUserAboutResponseToPlan(ctx context.Context, userEmail, message string) error {
+	return nil
 }
