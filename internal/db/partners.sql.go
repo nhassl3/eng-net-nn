@@ -19,3 +19,14 @@ func (q *Queries) AddPartner(ctx context.Context, dollar_1 uuid.UUID) error {
 	_, err := q.db.Exec(ctx, addPartner, dollar_1)
 	return err
 }
+
+const isPartner = `-- name: IsPartner :one
+SELECT EXISTS(SELECT 1 FROM partners WHERE user_id = $1::uuid) AS is_partner
+`
+
+func (q *Queries) IsPartner(ctx context.Context, dollar_1 uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isPartner, dollar_1)
+	var is_partner bool
+	err := row.Scan(&is_partner)
+	return is_partner, err
+}
