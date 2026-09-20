@@ -1,8 +1,16 @@
 # IpBuild Backend
 
+[![Release](https://img.shields.io/github/v/tag/nhassl3/eng-net-nn?label=release&sort=semver)](https://github.com/nhassl3/eng-net-nn/releases/tag/v1.0.0)
+[![Go Version](https://img.shields.io/badge/go-1.26-00ADD8?logo=go&logoColor=white)](go.mod)
+[![License](https://img.shields.io/github/license/nhassl3/eng-net-nn)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nhassl3/IpBuild-backend)](https://goreportcard.com/report/github.com/nhassl3/IpBuild-backend)
+[![Last Commit](https://img.shields.io/github/last-commit/nhassl3/eng-net-nn)](https://github.com/nhassl3/eng-net-nn/commits/main)
+
 > REST API рекрутинговой платформы: вакансии, отклики кандидатов с резюме и заявки на индивидуальные планы развития.
 
 Построен на **Go + Gin** с чистой слоистой архитектурой (`transport → service → repository → db`). Хранение данных — **PostgreSQL** (через [sqlc](https://sqlc.dev)), сессии и кэш — **Redis**, файлы резюме — **MinIO** (S3-совместимое объектное хранилище), аутентификация — **PASETO**-токены с хешированием паролей **Argon2id**.
+
+Текущий стабильный релиз — **[v1.0.0](https://github.com/nhassl3/eng-net-nn/releases/tag/v1.0.0)**.
 
 ---
 
@@ -16,20 +24,21 @@
 - [API](#api)
 - [Команды Makefile](#команды-makefile)
 - [Структура проекта](#структура-проекта)
+- [Лицензия](#лицензия)
 
 ---
 
 ## Возможности
 
-- 🔐 **Аутентификация и авторизация** — регистрация, вход, refresh- и access-токены на PASETO, выход с blacklist-токенов в Redis, роли (`user` / `admin`).
+- 🔐 **Аутентификация и авторизация** — регистрация, вход, refresh- и access-токены на PASETO, выход с blacklist-токенов в Redis, роли (`user` / `partner` / `admin`), назначение ролей администратором.
 - 🔑 **Безопасное хранение паролей** — Argon2id.
-- 💼 **Вакансии** — публичный листинг и просмотр, CRUD для администраторов.
-- 📨 **Отклики кандидатов** — приём анкеты вместе с файлом резюме, загрузка в MinIO через presigned-URL с поддержкой докачки (resume upload).
-- 📋 **Заявки на план развития** — приём заявок, привязка к пользователям, просмотр администратором.
-- 📧 **Уведомления по email** — асинхронные оповещения через SMTP (с graceful-фолбэком на no-op при отсутствии настроек).
+- 💼 **Вакансии и направления** — публичный листинг и просмотр вакансий, CRUD вакансий и направлений (job directions) для администраторов.
+- 📨 **Отклики кандидатов** — приём анкеты вместе с файлом резюме, загрузка в MinIO через presigned-URL с поддержкой докачки (resume upload), постраничный просмотр откликов администратором.
+- 📋 **Заявки на план развития** — приём заявок, привязка к пользователям (в т.ч. анонимно), ответ администратора на заявку с email-уведомлением, постраничный просмотр администратором.
+- 📧 **Уведомления по email** — HTML-шаблоны подтверждения и ответа на заявку, асинхронная отправка через SMTP (с graceful-фолбэком на no-op при отсутствии настроек).
 - 🗄️ **Кэширование профилей** в Redis с TTL.
-- 📝 **Структурированное логирование** (slog): человекочитаемый вывод локально, JSON в проде.
-- 🛡️ **Graceful shutdown**, CORS, ограничение размера multipart-загрузок.
+- 📝 **Структурированное логирование** (slog): человекочитаемый вывод локально, JSON в проде, request ID сквозь весь стек.
+- 🛡️ **Graceful shutdown**, настраиваемый CORS/CSRF (SameSite, Secure, allow-origins), ограничение размера multipart-загрузок, health-check эндпоинт.
 
 ## Технологии
 
@@ -150,34 +159,44 @@ MINIO_SECRET_KEY=your-secret-key
 
 ### Публичные эндпоинты
 
-| Метод  | Путь                     | Описание                                   |
-|--------|--------------------------|--------------------------------------------|
-| `POST` | `/auth/signup`           | Регистрация пользователя                   |
-| `POST` | `/auth/login`            | Вход, выдача access/refresh-токенов        |
-| `POST` | `/auth/refresh`          | Обновление токенов                         |
-| `GET`  | `/api/vacancies/`        | Список вакансий                            |
-| `GET`  | `/api/vacancies/:id`     | Вакансия по ID                             |
-| `POST` | `/api/vacancies/respond` | Отклик на вакансию (анкета + резюме-файл)  |
-| `POST` | `/api/plan/`             | Заявка на план развития                    |
+| Метод  | Путь                     | Описание                                            |
+|--------|--------------------------|------------------------------------------------------|
+| `POST` | `/auth/signup`           | Регистрация пользователя                            |
+| `POST` | `/auth/login`            | Вход, выдача access/refresh-токенов                 |
+| `POST` | `/auth/refresh`          | Обновление токенов (требует `X-Requested-With`)     |
+| `GET`  | `/api/vacancies`         | Список вакансий                                     |
+| `GET`  | `/api/vacancies/:id`     | Вакансия по ID                                      |
+| `POST` | `/api/vacancies/respond` | Отклик на вакансию (анкета + резюме-файл)           |
+| `POST` | `/api/plans/`            | Заявка на план развития (авторизация опциональна)   |
+| `GET`  | `/health`                | Проверка живости сервиса                            |
 
 ### Требуют авторизации (`Authorization: Bearer <access_token>`)
 
 | Метод  | Путь              | Описание                       |
-|--------|-------------------|--------------------------------|
+|--------|-------------------|---------------------------------|
 | `POST` | `/api/logout`     | Выход (токен в blacklist)      |
-| `GET`  | `/api/plan/:id`   | Получить ответ по своей заявке |
+| `GET`  | `/api/me`         | Профиль текущего пользователя  |
+| `GET`  | `/api/plans/:id`  | Получить ответ по своей заявке |
 
 ### Только для администраторов (`role: admin`)
 
-| Метод    | Путь                       | Описание                    |
-|----------|----------------------------|-----------------------------|
-| `POST`   | `/api/admin/vacancies/`    | Создать вакансию            |
-| `PUT`    | `/api/admin/vacancies/:id` | Обновить вакансию           |
-| `DELETE` | `/api/admin/vacancies/:id` | Удалить вакансию            |
-| `GET`    | `/api/admin/vacancies/`    | Список откликов на вакансии |
-| `GET`    | `/api/admin/vacancies/:id` | Отклик по ID                |
-| `GET`    | `/api/admin/plans/`        | Список заявок на планы      |
-| `GET`    | `/api/admin/plans/:id`     | Заявка по ID                |
+| Метод    | Путь                             | Описание                                |
+|----------|----------------------------------|------------------------------------------|
+| `POST`   | `/api/admin/add_admin/:id`       | Назначить роль admin пользователю        |
+| `POST`   | `/api/admin/add_partner/:id`     | Назначить роль partner пользователю      |
+| `POST`   | `/api/admin/vacancies/`          | Создать вакансию                         |
+| `PUT`    | `/api/admin/vacancies/:id`       | Обновить вакансию                        |
+| `DELETE` | `/api/admin/vacancies/:id`       | Удалить вакансию                         |
+| `GET`    | `/api/admin/vacancies/`          | Список откликов на вакансии (пагинация)  |
+| `GET`    | `/api/admin/vacancies/:id`       | Отклик по ID                             |
+| `GET`    | `/api/admin/job_directions`      | Список направлений                       |
+| `GET`    | `/api/admin/job_directions/:id`  | Направление по ID                        |
+| `POST`   | `/api/admin/job_directions/`     | Создать направление                      |
+| `PUT`    | `/api/admin/job_directions/:id`  | Обновить направление                     |
+| `DELETE` | `/api/admin/job_directions/:id`  | Удалить направление                      |
+| `GET`    | `/api/admin/plans/`              | Список заявок на планы (пагинация)       |
+| `GET`    | `/api/admin/plans/:id`           | Заявка по ID                             |
+| `POST`   | `/api/admin/plans/`              | Ответить на заявку (email-уведомление)   |
 
 <details>
 <summary>Пример: регистрация</summary>
@@ -230,5 +249,10 @@ curl -X POST http://localhost:8080/auth/signup \
 ├── pkg/                 # переиспользуемые пакеты (auth, hash, minio, redis, mailer, logger)
 ├── redis-config/        # конфиг и ACL для Redis
 ├── Makefile
+├── LICENSE
 └── sqlc.yaml
 ```
+
+## Лицензия
+
+Проект распространяется под лицензией [MIT](LICENSE).
