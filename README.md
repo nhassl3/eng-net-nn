@@ -182,6 +182,7 @@ MINIO_SECRET_KEY=your-secret-key
 
 | Метод    | Путь                             | Описание                                |
 |----------|----------------------------------|------------------------------------------|
+| `GET`    | `/api/admin/users`               | Точный поиск пользователя по `?username=`|
 | `POST`   | `/api/admin/add_admin/:id`       | Назначить роль admin пользователю        |
 | `POST`   | `/api/admin/add_partner/:id`     | Назначить роль partner пользователю      |
 | `POST`   | `/api/admin/vacancies/`          | Создать вакансию                         |
