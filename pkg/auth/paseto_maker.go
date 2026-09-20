@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -86,7 +87,7 @@ func (p *PASETOMaker) CreateRefreshToken(username, uid, role string) (string, *P
 	}, nil
 }
 
-func (p *PASETOMaker) VerifyToken(tokenStr string) (*Payload, error) {
+func (p *PASETOMaker) VerifyToken(_ context.Context, tokenStr string) (*Payload, error) {
 	parser := paseto.NewParser()
 	parser.AddRule(paseto.NotExpired())
 

@@ -121,7 +121,7 @@ func (s *AuthService) GenerateToken(_ context.Context, user *domain.User) (*doma
 }
 
 func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.User, error) {
-	payload, err := s.accessMaker.VerifyToken(token)
+	payload, err := s.accessMaker.VerifyToken(ctx, token)
 	if err != nil {
 		return nil, mapTokenError("auth_service.ParseToken", err)
 	}
@@ -135,7 +135,7 @@ func (s *AuthService) ParseToken(ctx context.Context, token string) (*domain.Use
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*domain.TokenPair, error) {
-	payload, err := s.refreshMaker.VerifyToken(refreshToken)
+	payload, err := s.refreshMaker.VerifyToken(ctx, refreshToken)
 	if err != nil {
 		return nil, mapTokenError("auth_service.RefreshToken", err)
 	}
@@ -153,7 +153,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*d
 }
 
 func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken string) error {
-	payload, err := s.accessMaker.VerifyToken(accessToken)
+	payload, err := s.accessMaker.VerifyToken(ctx, accessToken)
 	if err != nil {
 		return mapTokenError("auth_service.Logout", err)
 	}
@@ -163,7 +163,7 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 	}
 
 	if refreshToken != "" {
-		payloadRefresh, err := s.refreshMaker.VerifyToken(refreshToken)
+		payloadRefresh, err := s.refreshMaker.VerifyToken(ctx, refreshToken)
 		if err != nil {
 			return mapTokenError("auth_service.Logout: payload refresh", err)
 		}
