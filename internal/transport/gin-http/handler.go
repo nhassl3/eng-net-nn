@@ -108,6 +108,7 @@ func (h *Handler) InitRoutes(env string, allowOrigins []string) *gin.Engine {
 
 		admin := api.Group("/admin", h.middleware.UserIdentity, h.middleware.AdminIdentity)
 		{
+			admin.GET("/users", h.searchUser)            // ?username= exact search
 			admin.POST("/add_admin/:id", h.addAdmin)     // UID of the user
 			admin.POST("/add_partner/:id", h.addPartner) // UID of the user
 

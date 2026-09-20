@@ -15,6 +15,7 @@ type Authorization interface {
 
 type Admin interface {
 	IsAdmin(ctx context.Context, userID string) (bool, error)
+	IsPartner(ctx context.Context, userID string) (bool, error)
 	AddAdmin(ctx context.Context, userID string) error
 	AddPartner(ctx context.Context, userUID string) error
 }

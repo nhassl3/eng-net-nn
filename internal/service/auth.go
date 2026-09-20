@@ -86,9 +86,16 @@ func (s *AuthService) SignIn(ctx context.Context, req *domain.SignInInput) (*dom
 	if err != nil {
 		return nil, nil, fmt.Errorf("auth_service.SignIn: %w", err)
 	}
-	if isAdmin {
+	isPartner, err := s.adminRepo.IsPartner(ctx, user.UUID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("auth_service.SignIn: %w", err)
+	}
+	switch {
+	case isAdmin:
 		user.Role = "admin"
-	} else {
+	case isPartner:
+		user.Role = "partner"
+	default:
 		user.Role = "user"
 	}
 
@@ -193,13 +200,20 @@ func (s *AuthService) GetMe(ctx context.Context, uuid string) (*domain.User, err
 		}
 		_ = s.redisRepo.SetProfile(ctx, user)
 	}
-	ok, err := s.adminRepo.IsAdmin(ctx, uuid)
+	isAdmin, err := s.adminRepo.IsAdmin(ctx, uuid)
 	if err != nil {
 		return nil, fmt.Errorf("auth_service.GetMe: %w", err)
 	}
-	if ok {
+	isPartner, err := s.adminRepo.IsPartner(ctx, uuid)
+	if err != nil {
+		return nil, fmt.Errorf("auth_service.GetMe: %w", err)
+	}
+	switch {
+	case isAdmin:
 		user.Role = "admin"
-	} else {
+	case isPartner:
+		user.Role = "partner"
+	default:
 		user.Role = "user"
 	}
 	return user, nil

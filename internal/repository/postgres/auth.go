@@ -62,6 +62,9 @@ func (r *AuthRepo) GetMe(ctx context.Context, params domain.GetMeParams) (*domai
 		Username: stringPtrToNullable(params.Username),
 	})
 	if err != nil {
+		if mapped, ok := mapNotFound(err, domain.ErrUserNotExists); ok {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("auth_repo.GetMe: failed to get user: %w", err)
 	}
 	return new(mapUser(user)), nil

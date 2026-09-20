@@ -29,6 +29,19 @@ func (r *AdminRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
 	return ok, nil
 }
 
+func (r *AdminRepo) IsPartner(ctx context.Context, userID string) (bool, error) {
+	id, err := string2UUID(userID)
+	if err != nil {
+		return false, domain.ErrUserNotExists
+	}
+
+	ok, err := r.db.IsPartner(ctx, id)
+	if err != nil {
+		return false, fmt.Errorf("admin_repo.IsPartner: %w", err)
+	}
+	return ok, nil
+}
+
 func (r *AdminRepo) AddAdmin(ctx context.Context, userID string) error {
 	id, err := string2UUID(userID)
 	if err != nil {
